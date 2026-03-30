@@ -18,6 +18,8 @@ pub const sys_stat = @import("sys/stat.zig");
 pub const stdio = @import("stdio/stdio.zig");
 pub const malloc_mod = @import("malloc/malloc.zig");
 pub const pthread = @import("pthread/pthread.zig");
+pub const net = @import("net/net.zig");
+pub const poll = @import("poll/poll.zig");
 
 // Re-export for tests
 test {
@@ -33,4 +35,6 @@ test {
     _ = stdio;
     _ = malloc_mod;
     _ = pthread;
+    _ = net;
+    _ = poll;
 }
