@@ -570,7 +570,7 @@ pub const realloc = &reallocImpl;
 // Reset allocator state (test helper)
 // ---------------------------------------------------------------------------
 
-fn resetState() void {
+pub fn resetState() void {
     free_list_head = 0;
     wilderness = 0;
     wilderness_end = 0;

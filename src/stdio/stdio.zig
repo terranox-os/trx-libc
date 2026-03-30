@@ -264,17 +264,178 @@ export fn clearerr(stream: *FILE) void {
 }
 
 // ---------------------------------------------------------------------------
-// fopen / fclose (Phase 2 - requires malloc)
+// fopen / fclose / fseek / ftell (Phase 2 - requires malloc)
 // ---------------------------------------------------------------------------
 
-// TODO: fopen() - requires malloc to allocate FILE structs (Phase 2).
-//   Signature: export fn fopen(path: [*:0]const u8, mode: [*:0]const u8) ?*FILE
-//   Will parse mode string ("r", "w", "a", "r+", "w+", "a+"), translate to
-//   O_* flags, call open(), and allocate a FILE via malloc.
+const fcntl_mod = @import("../fcntl/fcntl.zig");
+const unistd_mod = @import("../unistd/unistd.zig");
 
-// TODO: fclose() - requires free to deallocate FILE structs (Phase 2).
-//   Signature: export fn fclose(stream: *FILE) c_int
-//   Will call fflush(), close(fd), and free the FILE.
+// In test mode we use the internal malloc implementation directly.
+// In freestanding mode it is also available via the same import.
+const malloc_mod = @import("../malloc/malloc.zig");
+
+// SEEK constants (matching POSIX / unistd.h)
+const SEEK_SET: c_int = 0;
+const SEEK_CUR: c_int = 1;
+const SEEK_END: c_int = 2;
+
+/// Parse a POSIX fopen mode string and return (O_flags, FILE_flags).
+/// Returns null if the mode string is invalid.
+fn parse_mode(mode: [*:0]const u8) ?struct { oflags: c_int, fflags: u32 } {
+    if (mode[0] == 0) return null;
+
+    const c0 = mode[0];
+    const c1 = mode[1];
+
+    // Check for '+' (read+write) — may be at position 1 or after 'b'
+    var plus = false;
+    if (c1 == '+') {
+        plus = true;
+    } else if (c1 == 'b' and mode[2] == '+') {
+        plus = true;
+    } else if (c1 != 0 and c1 != 'b') {
+        return null; // invalid character after base mode
+    }
+
+    switch (c0) {
+        'r' => {
+            if (plus) {
+                return .{
+                    .oflags = fcntl_mod.O_RDWR,
+                    .fflags = F_READ | F_WRITE,
+                };
+            }
+            return .{
+                .oflags = fcntl_mod.O_RDONLY,
+                .fflags = F_READ,
+            };
+        },
+        'w' => {
+            if (plus) {
+                return .{
+                    .oflags = fcntl_mod.O_RDWR | fcntl_mod.O_CREAT | fcntl_mod.O_TRUNC,
+                    .fflags = F_READ | F_WRITE,
+                };
+            }
+            return .{
+                .oflags = fcntl_mod.O_WRONLY | fcntl_mod.O_CREAT | fcntl_mod.O_TRUNC,
+                .fflags = F_WRITE,
+            };
+        },
+        'a' => {
+            if (plus) {
+                return .{
+                    .oflags = fcntl_mod.O_RDWR | fcntl_mod.O_CREAT | fcntl_mod.O_APPEND,
+                    .fflags = F_READ | F_WRITE | F_APPEND,
+                };
+            }
+            return .{
+                .oflags = fcntl_mod.O_WRONLY | fcntl_mod.O_CREAT | fcntl_mod.O_APPEND,
+                .fflags = F_WRITE | F_APPEND,
+            };
+        },
+        else => return null,
+    }
+}
+
+/// Test-mode stubs for open/close/lseek — real syscalls are not available.
+fn raw_open_test(_: [*:0]const u8, _: c_int, _: c_uint) c_int {
+    return 3; // fake fd
+}
+
+fn raw_close_test(_: c_int) c_int {
+    return 0;
+}
+
+fn raw_lseek_test(_: c_int, _: i64, _: c_int) i64 {
+    return 0;
+}
+
+const raw_open = if (is_test) raw_open_test else fcntl_mod.open;
+const raw_close = if (is_test) raw_close_test else unistd_mod.close;
+const raw_lseek = if (is_test) raw_lseek_test else unistd_mod.lseek;
+
+export fn fopen(path: [*:0]const u8, mode: [*:0]const u8) ?*FILE {
+    const parsed = parse_mode(mode) orelse return null;
+
+    // Open the file via syscall
+    const fd = raw_open(path, parsed.oflags, 0o666);
+    if (fd < 0) return null;
+
+    // Allocate a FILE struct via malloc
+    const raw_ptr = malloc_mod.malloc(@sizeOf(FILE)) orelse {
+        _ = raw_close(fd);
+        return null;
+    };
+    const file: *FILE = @ptrCast(@alignCast(raw_ptr));
+
+    // Initialize the FILE struct
+    file.* = FILE{
+        .fd = fd,
+        .flags = parsed.fflags,
+    };
+
+    return file;
+}
+
+export fn fclose(stream: *FILE) c_int {
+    // Flush any pending buffered data
+    var result: c_int = 0;
+    if (flush_impl(stream) != 0) {
+        result = EOF;
+    }
+
+    // Close the underlying file descriptor
+    if (raw_close(stream.fd) < 0) {
+        result = EOF;
+    }
+
+    // Free the FILE struct
+    malloc_mod.free(@ptrCast(stream));
+
+    return result;
+}
+
+export fn fseek(stream: *FILE, offset: c_long, whence: c_int) c_int {
+    // Flush any pending writes before seeking
+    if (stream.flags & F_WRITE != 0) {
+        if (flush_impl(stream) != 0) return -1;
+    }
+
+    // For read streams, discard the buffer
+    if (stream.flags & F_READ != 0) {
+        stream.buf_pos = 0;
+        stream.buf_len = 0;
+    }
+
+    const ret = raw_lseek(stream.fd, @as(i64, offset), whence);
+    if (ret < 0) return -1;
+
+    // Clear EOF flag on successful seek
+    stream.eof_flag = false;
+
+    return 0;
+}
+
+export fn ftell(stream: *FILE) c_long {
+    // Get current position from kernel
+    const pos = raw_lseek(stream.fd, 0, SEEK_CUR);
+    if (pos < 0) return -1;
+
+    // Adjust for buffered data:
+    // If we have a read buffer, subtract unread bytes
+    if (stream.flags & F_READ != 0 and stream.buf_len > 0) {
+        const unread = stream.buf_len - stream.buf_pos;
+        return @intCast(pos - @as(i64, @intCast(unread)));
+    }
+
+    // If we have a write buffer, add pending bytes
+    if (stream.flags & F_WRITE != 0 and stream.buf_pos > 0) {
+        return @intCast(pos + @as(i64, @intCast(stream.buf_pos)));
+    }
+
+    return @intCast(pos);
+}
 
 // ---------------------------------------------------------------------------
 // printf formatting engine
@@ -965,4 +1126,136 @@ test "render_unsigned zero" {
     const start = render_unsigned(0, 10, false, &buf);
     const result = buf[start..20];
     try testing.expectEqualSlices(u8, "0", result);
+}
+
+// ---------------------------------------------------------------------------
+// fopen / fclose / fseek / ftell tests
+// ---------------------------------------------------------------------------
+
+test "parse_mode r" {
+    const m = parse_mode("r") orelse return error.TestUnexpectedResult;
+    try testing.expectEqual(fcntl_mod.O_RDONLY, m.oflags);
+    try testing.expectEqual(F_READ, m.fflags);
+}
+
+test "parse_mode w" {
+    const m = parse_mode("w") orelse return error.TestUnexpectedResult;
+    try testing.expectEqual(fcntl_mod.O_WRONLY | fcntl_mod.O_CREAT | fcntl_mod.O_TRUNC, m.oflags);
+    try testing.expectEqual(F_WRITE, m.fflags);
+}
+
+test "parse_mode a" {
+    const m = parse_mode("a") orelse return error.TestUnexpectedResult;
+    try testing.expectEqual(fcntl_mod.O_WRONLY | fcntl_mod.O_CREAT | fcntl_mod.O_APPEND, m.oflags);
+    try testing.expectEqual(F_WRITE | F_APPEND, m.fflags);
+}
+
+test "parse_mode r+" {
+    const m = parse_mode("r+") orelse return error.TestUnexpectedResult;
+    try testing.expectEqual(fcntl_mod.O_RDWR, m.oflags);
+    try testing.expectEqual(F_READ | F_WRITE, m.fflags);
+}
+
+test "parse_mode w+" {
+    const m = parse_mode("w+") orelse return error.TestUnexpectedResult;
+    try testing.expectEqual(fcntl_mod.O_RDWR | fcntl_mod.O_CREAT | fcntl_mod.O_TRUNC, m.oflags);
+    try testing.expectEqual(F_READ | F_WRITE, m.fflags);
+}
+
+test "parse_mode a+" {
+    const m = parse_mode("a+") orelse return error.TestUnexpectedResult;
+    try testing.expectEqual(fcntl_mod.O_RDWR | fcntl_mod.O_CREAT | fcntl_mod.O_APPEND, m.oflags);
+    try testing.expectEqual(F_READ | F_WRITE | F_APPEND, m.fflags);
+}
+
+test "parse_mode rb" {
+    // Binary mode should be accepted (treated same as text)
+    const m = parse_mode("rb") orelse return error.TestUnexpectedResult;
+    try testing.expectEqual(fcntl_mod.O_RDONLY, m.oflags);
+    try testing.expectEqual(F_READ, m.fflags);
+}
+
+test "parse_mode wb+" {
+    const m = parse_mode("wb+") orelse return error.TestUnexpectedResult;
+    try testing.expectEqual(fcntl_mod.O_RDWR | fcntl_mod.O_CREAT | fcntl_mod.O_TRUNC, m.oflags);
+    try testing.expectEqual(F_READ | F_WRITE, m.fflags);
+}
+
+test "parse_mode invalid empty" {
+    try testing.expect(parse_mode("") == null);
+}
+
+test "parse_mode invalid char" {
+    try testing.expect(parse_mode("z") == null);
+}
+
+test "fopen allocates and initializes FILE" {
+    malloc_mod.resetState();
+    const f = fopen("test.txt", "r") orelse return error.TestUnexpectedResult;
+    // Verify the FILE was properly initialized
+    try testing.expectEqual(@as(c_int, 3), f.fd); // test stub returns fd 3
+    try testing.expectEqual(F_READ, f.flags);
+    try testing.expectEqual(@as(usize, 0), f.buf_pos);
+    try testing.expectEqual(@as(usize, 0), f.buf_len);
+    try testing.expectEqual(false, f.error_flag);
+    try testing.expectEqual(false, f.eof_flag);
+
+    // Clean up
+    const ret = fclose(f);
+    try testing.expectEqual(@as(c_int, 0), ret);
+}
+
+test "fopen invalid mode returns null" {
+    malloc_mod.resetState();
+    const f = fopen("test.txt", "z");
+    try testing.expect(f == null);
+}
+
+test "fopen write mode sets correct flags" {
+    malloc_mod.resetState();
+    const f = fopen("test.txt", "w") orelse return error.TestUnexpectedResult;
+    try testing.expectEqual(F_WRITE, f.flags);
+    _ = fclose(f);
+}
+
+test "fopen append mode sets correct flags" {
+    malloc_mod.resetState();
+    const f = fopen("test.txt", "a") orelse return error.TestUnexpectedResult;
+    try testing.expectEqual(F_WRITE | F_APPEND, f.flags);
+    _ = fclose(f);
+}
+
+test "fclose flushes and frees" {
+    malloc_mod.resetState();
+    const f = fopen("test.txt", "w") orelse return error.TestUnexpectedResult;
+    // Write some data to the buffer
+    _ = fputc_impl('X', f);
+    try testing.expectEqual(@as(usize, 1), f.buf_pos);
+    // fclose should flush and free
+    const ret = fclose(f);
+    try testing.expectEqual(@as(c_int, 0), ret);
+}
+
+test "fseek clears eof flag" {
+    var f = FILE{ .fd = 99, .flags = F_READ };
+    f.eof_flag = true;
+    const ret = fseek(&f, 0, SEEK_SET);
+    try testing.expectEqual(@as(c_int, 0), ret);
+    try testing.expectEqual(false, f.eof_flag);
+}
+
+test "fseek resets read buffer" {
+    var f = FILE{ .fd = 99, .flags = F_READ };
+    f.buf_len = 100;
+    f.buf_pos = 50;
+    const ret = fseek(&f, 0, SEEK_SET);
+    try testing.expectEqual(@as(c_int, 0), ret);
+    try testing.expectEqual(@as(usize, 0), f.buf_pos);
+    try testing.expectEqual(@as(usize, 0), f.buf_len);
+}
+
+test "ftell returns position" {
+    var f = FILE{ .fd = 99, .flags = F_READ };
+    const pos = ftell(&f);
+    try testing.expectEqual(@as(c_long, 0), pos);
 }

@@ -49,9 +49,11 @@ int    vfprintf(FILE *stream, const char *fmt, __builtin_va_list ap);
 int    vsnprintf(char *buf, size_t size, const char *fmt, __builtin_va_list ap);
 #endif
 
-/* fopen/fclose - Phase 2 (requires malloc) */
-/* FILE *fopen(const char *path, const char *mode); */
-/* int   fclose(FILE *stream); */
+/* fopen/fclose/fseek/ftell - Phase 2 (requires malloc) */
+FILE *fopen(const char *path, const char *mode);
+int   fclose(FILE *stream);
+int   fseek(FILE *stream, long offset, int whence);
+long  ftell(FILE *stream);
 
 #ifdef __cplusplus
 }
