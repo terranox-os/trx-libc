@@ -29,6 +29,21 @@ pub const nr = struct {
     // TerranoxOS-specific filesystem syscalls (subsystem 4)
     pub const TRX_FS_MKDIR: usize = c.GEN_SYS_TRX_FS_MKDIR;
     pub const TRX_FS_UNLINK: usize = c.GEN_SYS_TRX_FS_UNLINK;
+
+    // Shared I/O multiplexing
+    pub const POLL: usize = c.GEN_SYS_POLL;
+
+    // TerranoxOS-specific IPC (subsystem 3)
+    pub const TRX_EVENT_WAIT_MANY: usize = c.GEN_SYS_TRX_EVENT_WAIT_MANY;
+
+    // TerranoxOS-specific networking syscalls (subsystem 8)
+    pub const TRX_NET_SOCKET: usize = c.GEN_SYS_TRX_NET_SOCKET;
+    pub const TRX_NET_BIND: usize = c.GEN_SYS_TRX_NET_BIND;
+    pub const TRX_NET_LISTEN: usize = c.GEN_SYS_TRX_NET_LISTEN;
+    pub const TRX_NET_ACCEPT: usize = c.GEN_SYS_TRX_NET_ACCEPT;
+    pub const TRX_NET_CONNECT: usize = c.GEN_SYS_TRX_NET_CONNECT;
+    pub const TRX_NET_SENDMSG: usize = c.GEN_SYS_TRX_NET_SENDMSG;
+    pub const TRX_NET_RECVMSG: usize = c.GEN_SYS_TRX_NET_RECVMSG;
 };
 
 pub fn syscall0(number: usize) usize {
