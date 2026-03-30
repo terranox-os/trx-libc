@@ -1,28 +1,29 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    const target = b.resolveTargetQuery(.{
-        .cpu_arch = .x86_64,
-        .os_tag = .freestanding,
-        .abi = .none,
-    });
     const optimize = b.standardOptimizeOption(.{});
 
-    const lib = b.addStaticLibrary(.{
-        .name = "c",
-        .root_source_file = b.path("src/libc.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    lib.root_module.red_zone = false;
-    lib.root_module.stack_protector = false;
+    const targets = [_]std.Target.Query{
+        .{ .cpu_arch = .x86_64, .os_tag = .freestanding, .abi = .none },
+        .{ .cpu_arch = .aarch64, .os_tag = .freestanding, .abi = .none },
+        .{ .cpu_arch = .riscv64, .os_tag = .freestanding, .abi = .none },
+    };
 
-    // kernel-libs headers for @cImport
-    lib.addIncludePath(b.path("deps/kernel-libs/genesis-abi/include"));
+    for (targets) |t| {
+        const resolved = b.resolveTargetQuery(t);
+        const lib = b.addStaticLibrary(.{
+            .name = b.fmt("c-{s}", .{@tagName(t.cpu_arch.?)}),
+            .root_source_file = b.path("src/libc.zig"),
+            .target = resolved,
+            .optimize = optimize,
+        });
+        lib.root_module.red_zone = false;
+        lib.root_module.stack_protector = false;
+        lib.addIncludePath(b.path("deps/kernel-libs/genesis-abi/include"));
+        b.installArtifact(lib);
+    }
 
-    b.installArtifact(lib);
-
-    // Host-native tests
+    // Host-native tests (always native arch)
     const test_step = b.step("test", "Run unit tests");
     const tests = b.addTest(.{
         .root_source_file = b.path("src/libc.zig"),
