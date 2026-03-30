@@ -13,6 +13,8 @@ pub const misc = @import("misc/misc.zig");
 pub const string = @import("string/string.zig");
 pub const stdlib = @import("stdlib/stdlib.zig");
 pub const ctype = @import("ctype/ctype.zig");
+pub const fcntl = @import("fcntl/fcntl.zig");
+pub const sys_stat = @import("sys/stat.zig");
 
 // Re-export for tests
 test {
@@ -23,4 +25,6 @@ test {
     _ = string;
     _ = stdlib;
     _ = ctype;
+    _ = fcntl;
+    _ = sys_stat;
 }
