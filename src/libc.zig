@@ -17,6 +17,7 @@ pub const fcntl = @import("fcntl/fcntl.zig");
 pub const sys_stat = @import("sys/stat.zig");
 pub const stdio = @import("stdio/stdio.zig");
 pub const malloc_mod = @import("malloc/malloc.zig");
+pub const pthread = @import("pthread/pthread.zig");
 
 // Re-export for tests
 test {
@@ -31,4 +32,5 @@ test {
     _ = sys_stat;
     _ = stdio;
     _ = malloc_mod;
+    _ = pthread;
 }
