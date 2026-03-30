@@ -2,6 +2,11 @@
 //!
 //! Provides _start (process entry point) and __libc_start_main.
 //! The kernel places argc, argv, envp on the stack before jumping to _start.
+//!
+//! Architecture-conditional: supports x86_64, AArch64, and RISC-V 64.
+
+const builtin = @import("builtin");
+const arch = builtin.cpu.arch;
 
 const misc = @import("../misc/misc.zig");
 
@@ -30,12 +35,29 @@ export fn _start() callconv(.Naked) noreturn {
     // Zero frame pointer (marks outermost frame for debuggers)
     // Pass stack pointer as argument to __libc_start_main
     // Align stack to 16 bytes (ABI requirement)
-    asm volatile (
-        \\xorl %%ebp, %%ebp
-        \\movq %%rsp, %%rdi
-        \\andq $-16, %%rsp
-        \\call __libc_start_main
-        \\ud2
-    );
+    switch (arch) {
+        .x86_64 => asm volatile (
+            \\xorl %%ebp, %%ebp
+            \\movq %%rsp, %%rdi
+            \\andq $-16, %%rsp
+            \\call __libc_start_main
+            \\ud2
+        ),
+        .aarch64 => asm volatile (
+            \\mov x29, #0
+            \\mov x0, sp
+            \\and sp, x0, #-16
+            \\bl __libc_start_main
+            \\brk #0
+        ),
+        .riscv64 => asm volatile (
+            \\li fp, 0
+            \\mv a0, sp
+            \\andi sp, sp, -16
+            \\call __libc_start_main
+            \\ebreak
+        ),
+        else => @compileError("unsupported architecture"),
+    }
     unreachable;
 }
