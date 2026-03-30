@@ -10,6 +10,9 @@ pub const crt = @import("crt/crt.zig");
 // POSIX function exports
 pub const unistd = @import("unistd/unistd.zig");
 pub const misc = @import("misc/misc.zig");
+pub const string = @import("string/string.zig");
+pub const stdlib = @import("stdlib/stdlib.zig");
+pub const ctype = @import("ctype/ctype.zig");
 
 // Re-export for tests
 test {
@@ -17,4 +20,7 @@ test {
     _ = errno_mod;
     _ = unistd;
     _ = misc;
+    _ = string;
+    _ = stdlib;
+    _ = ctype;
 }
