@@ -21,6 +21,16 @@ pub const pthread = @import("pthread/pthread.zig");
 pub const net = @import("net/net.zig");
 pub const poll = @import("poll/poll.zig");
 
+// Phase 5: Signal handling
+pub const signal_mod = @import("signal/signal.zig");
+
+// Phase 6: TerranoxOS extensions
+pub const trx_capability = @import("terranox/capability.zig");
+pub const trx_display = @import("terranox/display.zig");
+pub const trx_input = @import("terranox/input.zig");
+pub const trx_gpu = @import("terranox/gpu.zig");
+pub const trx_ipc = @import("terranox/ipc.zig");
+
 // Re-export for tests
 test {
     _ = syscall;
@@ -37,4 +47,10 @@ test {
     _ = pthread;
     _ = net;
     _ = poll;
+    _ = signal_mod;
+    _ = trx_capability;
+    _ = trx_display;
+    _ = trx_input;
+    _ = trx_gpu;
+    _ = trx_ipc;
 }

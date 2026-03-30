@@ -33,6 +33,9 @@ pub const nr = struct {
     // Shared I/O multiplexing
     pub const POLL: usize = c.GEN_SYS_POLL;
 
+    // TerranoxOS-specific process management (subsystem 0)
+    pub const TRX_PROCESS_KILL: usize = c.GEN_SYS_TRX_PROCESS_KILL;
+
     // TerranoxOS-specific IPC (subsystem 3)
     pub const TRX_EVENT_WAIT_MANY: usize = c.GEN_SYS_TRX_EVENT_WAIT_MANY;
 
