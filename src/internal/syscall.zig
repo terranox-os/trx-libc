@@ -23,6 +23,12 @@ pub const nr = struct {
     pub const LSEEK: usize = c.GEN_SYS_LSEEK;
     pub const STAT: usize = c.GEN_SYS_STAT;
     pub const FSTAT: usize = c.GEN_SYS_FSTAT;
+    pub const DUP2: usize = c.GEN_SYS_DUP2;
+    pub const PIPE: usize = c.GEN_SYS_PIPE;
+
+    // TerranoxOS-specific filesystem syscalls (subsystem 4)
+    pub const TRX_FS_MKDIR: usize = c.GEN_SYS_TRX_FS_MKDIR;
+    pub const TRX_FS_UNLINK: usize = c.GEN_SYS_TRX_FS_UNLINK;
 };
 
 pub fn syscall0(number: usize) usize {
