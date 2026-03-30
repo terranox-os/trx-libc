@@ -1,0 +1,3 @@
+[submodule "deps/kernel-libs"]
+	path = deps/kernel-libs
+	url = https://github.com/terranox-os/kernel-libs.git
