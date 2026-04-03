@@ -23,6 +23,14 @@ pub fn build(b: *std.Build) void {
         b.installArtifact(lib);
     }
 
+    // Install C headers for external consumers
+    const install_headers = b.addInstallDirectory(.{
+        .source_dir = b.path("include"),
+        .install_dir = .header,
+        .install_subdir = "",
+    });
+    b.getInstallStep().dependOn(&install_headers.step);
+
     // Host-native tests (always native arch)
     const test_step = b.step("test", "Run unit tests");
     const tests = b.addTest(.{
