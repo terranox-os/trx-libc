@@ -47,7 +47,55 @@ pub const nr = struct {
     // TerranoxOS-specific IPC (subsystem 3)
     pub const TRX_EVENT_WAIT_MANY: usize = c.GEN_SYS_TRX_EVENT_WAIT_MANY;
 
-    // TerranoxOS-specific networking syscalls (subsystem 8)
+    // TerranoxOS-specific thread management (subsystem 1)
+    pub const TRX_THREAD_CREATE: usize = c.GEN_SYS_TRX_THREAD_CREATE;
+    pub const TRX_THREAD_EXIT: usize = c.GEN_SYS_TRX_THREAD_EXIT;
+    pub const TRX_THREAD_JOIN: usize = c.GEN_SYS_TRX_THREAD_JOIN;
+    pub const TRX_FUTEX_WAIT: usize = c.GEN_SYS_TRX_FUTEX_WAIT;
+    pub const TRX_FUTEX_WAKE: usize = c.GEN_SYS_TRX_FUTEX_WAKE;
+
+    // TerranoxOS-specific process management (subsystem 0)
+    pub const TRX_PROCESS_CAP_GRANT: usize = c.GEN_SYS_TRX_PROCESS_CAP_GRANT;
+    pub const TRX_PROCESS_CAP_REVOKE: usize = c.GEN_SYS_TRX_PROCESS_CAP_REVOKE;
+    pub const TRX_PROCESS_CAP_QUERY: usize = c.GEN_SYS_TRX_PROCESS_CAP_QUERY;
+
+    // TerranoxOS-specific IPC (subsystem 3)
+    pub const TRX_CHANNEL_CREATE: usize = c.GEN_SYS_TRX_CHANNEL_CREATE;
+    pub const TRX_CHANNEL_SEND: usize = c.GEN_SYS_TRX_CHANNEL_SEND;
+    pub const TRX_CHANNEL_RECV: usize = c.GEN_SYS_TRX_CHANNEL_RECV;
+    pub const TRX_CHANNEL_CLOSE: usize = c.GEN_SYS_TRX_CHANNEL_CLOSE;
+    pub const TRX_SIGNAL_CREATE: usize = c.GEN_SYS_TRX_SIGNAL_CREATE;
+    pub const TRX_SIGNAL_RAISE: usize = c.GEN_SYS_TRX_SIGNAL_RAISE;
+    pub const TRX_SIGNAL_WAIT: usize = c.GEN_SYS_TRX_SIGNAL_WAIT;
+
+    // TerranoxOS-specific display/compositor (subsystem 5)
+    pub const TRX_DISPLAY_ENUMERATE: usize = c.GEN_SYS_TRX_DISPLAY_ENUMERATE;
+    pub const TRX_DISPLAY_SET_MODE: usize = c.GEN_SYS_TRX_DISPLAY_SET_MODE;
+    pub const TRX_COMPOSITOR_CREATE: usize = c.GEN_SYS_TRX_COMPOSITOR_CREATE;
+    pub const TRX_COMPOSITOR_PRESENT: usize = c.GEN_SYS_TRX_COMPOSITOR_PRESENT;
+    pub const TRX_SURFACE_CREATE: usize = c.GEN_SYS_TRX_SURFACE_CREATE;
+    pub const TRX_SURFACE_DESTROY: usize = c.GEN_SYS_TRX_SURFACE_DESTROY;
+    pub const TRX_BUFFER_CREATE: usize = c.GEN_SYS_TRX_BUFFER_CREATE;
+    pub const TRX_BUFFER_MAP: usize = c.GEN_SYS_TRX_BUFFER_MAP;
+    pub const TRX_BUFFER_UNMAP: usize = c.GEN_SYS_TRX_BUFFER_UNMAP;
+
+    // TerranoxOS-specific input devices (subsystem 6)
+    pub const TRX_INPUT_ENUMERATE: usize = c.GEN_SYS_TRX_INPUT_ENUMERATE;
+    pub const TRX_INPUT_OPEN: usize = c.GEN_SYS_TRX_INPUT_OPEN;
+    pub const TRX_INPUT_CLOSE: usize = c.GEN_SYS_TRX_INPUT_CLOSE;
+    pub const TRX_INPUT_READ_EVENTS: usize = c.GEN_SYS_TRX_INPUT_READ_EVENTS;
+    pub const TRX_INPUT_GRAB: usize = c.GEN_SYS_TRX_INPUT_GRAB;
+    pub const TRX_INPUT_UNGRAB: usize = c.GEN_SYS_TRX_INPUT_UNGRAB;
+
+    // TerranoxOS-specific GPU/DRM (subsystem 7)
+    pub const TRX_GPU_OPEN: usize = c.GEN_SYS_TRX_GPU_OPEN;
+    pub const TRX_GPU_CLOSE: usize = c.GEN_SYS_TRX_GPU_CLOSE;
+    pub const TRX_GPU_ALLOC_BO: usize = c.GEN_SYS_TRX_GPU_ALLOC_BO;
+    pub const TRX_GPU_FREE_BO: usize = c.GEN_SYS_TRX_GPU_FREE_BO;
+    pub const TRX_GPU_SUBMIT: usize = c.GEN_SYS_TRX_GPU_SUBMIT;
+    pub const TRX_GPU_WAIT_FENCE: usize = c.GEN_SYS_TRX_GPU_WAIT_FENCE;
+
+    // TerranoxOS-specific networking (subsystem 8)
     pub const TRX_NET_SOCKET: usize = c.GEN_SYS_TRX_NET_SOCKET;
     pub const TRX_NET_BIND: usize = c.GEN_SYS_TRX_NET_BIND;
     pub const TRX_NET_LISTEN: usize = c.GEN_SYS_TRX_NET_LISTEN;

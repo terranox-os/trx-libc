@@ -10,27 +10,13 @@ const syscall = @import("../internal/syscall.zig");
 const errno_mod = @import("../errno/errno.zig");
 
 // ---------------------------------------------------------------------------
-// Syscall numbers (from genesis_syscall.h)
-// ---------------------------------------------------------------------------
-
-const TRX_DISPLAY_ENUMERATE: usize = 0x0150;
-const TRX_DISPLAY_SET_MODE: usize = 0x0151;
-const TRX_COMPOSITOR_CREATE: usize = 0x0152;
-const TRX_COMPOSITOR_PRESENT: usize = 0x0153;
-const TRX_SURFACE_CREATE: usize = 0x0154;
-const TRX_SURFACE_DESTROY: usize = 0x0155;
-const TRX_BUFFER_CREATE: usize = 0x0157;
-const TRX_BUFFER_MAP: usize = 0x0158;
-const TRX_BUFFER_UNMAP: usize = 0x0159;
-
-// ---------------------------------------------------------------------------
 // Real implementations
 // ---------------------------------------------------------------------------
 
 fn display_enumerate_real(displays: *anyopaque, count: *u32) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall2(
-            TRX_DISPLAY_ENUMERATE,
+            syscall.nr.TRX_DISPLAY_ENUMERATE,
             @intFromPtr(displays),
             @intFromPtr(count),
         ),
@@ -41,7 +27,7 @@ fn display_enumerate_real(displays: *anyopaque, count: *u32) c_int {
 fn display_set_mode_real(display_id: u32, mode: *const anyopaque) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall2(
-            TRX_DISPLAY_SET_MODE,
+            syscall.nr.TRX_DISPLAY_SET_MODE,
             @as(usize, display_id),
             @intFromPtr(mode),
         ),
@@ -50,7 +36,7 @@ fn display_set_mode_real(display_id: u32, mode: *const anyopaque) c_int {
 }
 
 fn compositor_create_real(flags: u32) i64 {
-    const raw = syscall.syscall1(TRX_COMPOSITOR_CREATE, @as(usize, flags));
+    const raw = syscall.syscall1(syscall.nr.TRX_COMPOSITOR_CREATE, @as(usize, flags));
     const signed: isize = @bitCast(raw);
     if (signed < 0 and signed > -4096) {
         errno_mod.errno = @intCast(-signed);
@@ -62,7 +48,7 @@ fn compositor_create_real(flags: u32) i64 {
 fn compositor_present_real(handle: i64, layers: *const anyopaque, count: u32) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall3(
-            TRX_COMPOSITOR_PRESENT,
+            syscall.nr.TRX_COMPOSITOR_PRESENT,
             @bitCast(handle),
             @intFromPtr(layers),
             @as(usize, count),
@@ -73,7 +59,7 @@ fn compositor_present_real(handle: i64, layers: *const anyopaque, count: u32) c_
 
 fn surface_create_real(width: u32, height: u32, format: u32, flags: u32) i64 {
     const raw = syscall.syscall4(
-        TRX_SURFACE_CREATE,
+        syscall.nr.TRX_SURFACE_CREATE,
         @as(usize, width),
         @as(usize, height),
         @as(usize, format),
@@ -89,14 +75,14 @@ fn surface_create_real(width: u32, height: u32, format: u32, flags: u32) i64 {
 
 fn surface_destroy_real(handle: i64) c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall1(TRX_SURFACE_DESTROY, @bitCast(handle)),
+        syscall.syscall1(syscall.nr.TRX_SURFACE_DESTROY, @bitCast(handle)),
     );
     return @intCast(ret);
 }
 
 fn buffer_create_real(width: u32, height: u32, format: u32, usage: u32) i64 {
     const raw = syscall.syscall4(
-        TRX_BUFFER_CREATE,
+        syscall.nr.TRX_BUFFER_CREATE,
         @as(usize, width),
         @as(usize, height),
         @as(usize, format),
@@ -112,7 +98,7 @@ fn buffer_create_real(width: u32, height: u32, format: u32, usage: u32) i64 {
 
 fn buffer_map_real(handle: i64, prot: u32) i64 {
     const raw = syscall.syscall2(
-        TRX_BUFFER_MAP,
+        syscall.nr.TRX_BUFFER_MAP,
         @bitCast(handle),
         @as(usize, prot),
     );
@@ -126,7 +112,7 @@ fn buffer_map_real(handle: i64, prot: u32) i64 {
 
 fn buffer_unmap_real(handle: i64) c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall1(TRX_BUFFER_UNMAP, @bitCast(handle)),
+        syscall.syscall1(syscall.nr.TRX_BUFFER_UNMAP, @bitCast(handle)),
     );
     return @intCast(ret);
 }
@@ -238,15 +224,15 @@ pub export fn trx_buffer_unmap(handle: i64) c_int {
 const testing = if (is_test) @import("std").testing else undefined;
 
 test "display syscall numbers" {
-    try testing.expectEqual(@as(usize, 0x0150), TRX_DISPLAY_ENUMERATE);
-    try testing.expectEqual(@as(usize, 0x0151), TRX_DISPLAY_SET_MODE);
-    try testing.expectEqual(@as(usize, 0x0152), TRX_COMPOSITOR_CREATE);
-    try testing.expectEqual(@as(usize, 0x0153), TRX_COMPOSITOR_PRESENT);
-    try testing.expectEqual(@as(usize, 0x0154), TRX_SURFACE_CREATE);
-    try testing.expectEqual(@as(usize, 0x0155), TRX_SURFACE_DESTROY);
-    try testing.expectEqual(@as(usize, 0x0157), TRX_BUFFER_CREATE);
-    try testing.expectEqual(@as(usize, 0x0158), TRX_BUFFER_MAP);
-    try testing.expectEqual(@as(usize, 0x0159), TRX_BUFFER_UNMAP);
+    try testing.expectEqual(@as(usize, 0x0150), syscall.nr.TRX_DISPLAY_ENUMERATE);
+    try testing.expectEqual(@as(usize, 0x0151), syscall.nr.TRX_DISPLAY_SET_MODE);
+    try testing.expectEqual(@as(usize, 0x0152), syscall.nr.TRX_COMPOSITOR_CREATE);
+    try testing.expectEqual(@as(usize, 0x0153), syscall.nr.TRX_COMPOSITOR_PRESENT);
+    try testing.expectEqual(@as(usize, 0x0154), syscall.nr.TRX_SURFACE_CREATE);
+    try testing.expectEqual(@as(usize, 0x0155), syscall.nr.TRX_SURFACE_DESTROY);
+    try testing.expectEqual(@as(usize, 0x0157), syscall.nr.TRX_BUFFER_CREATE);
+    try testing.expectEqual(@as(usize, 0x0158), syscall.nr.TRX_BUFFER_MAP);
+    try testing.expectEqual(@as(usize, 0x0159), syscall.nr.TRX_BUFFER_UNMAP);
 }
 
 test "trx_display_enumerate stub returns 0" {

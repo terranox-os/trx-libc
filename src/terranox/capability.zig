@@ -10,21 +10,13 @@ const syscall = @import("../internal/syscall.zig");
 const errno_mod = @import("../errno/errno.zig");
 
 // ---------------------------------------------------------------------------
-// Syscall numbers (from genesis_syscall.h)
-// ---------------------------------------------------------------------------
-
-const TRX_PROCESS_CAP_GRANT: usize = 0x0105;
-const TRX_PROCESS_CAP_REVOKE: usize = 0x0106;
-const TRX_PROCESS_CAP_QUERY: usize = 0x0107;
-
-// ---------------------------------------------------------------------------
 // Real implementations
 // ---------------------------------------------------------------------------
 
 fn cap_grant_real(pid: i64, cap_id: u64, rights: u64) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall3(
-            TRX_PROCESS_CAP_GRANT,
+            syscall.nr.TRX_PROCESS_CAP_GRANT,
             @bitCast(pid),
             cap_id,
             rights,
@@ -36,7 +28,7 @@ fn cap_grant_real(pid: i64, cap_id: u64, rights: u64) c_int {
 fn cap_revoke_real(pid: i64, cap_id: u64) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall2(
-            TRX_PROCESS_CAP_REVOKE,
+            syscall.nr.TRX_PROCESS_CAP_REVOKE,
             @bitCast(pid),
             cap_id,
         ),
@@ -47,7 +39,7 @@ fn cap_revoke_real(pid: i64, cap_id: u64) c_int {
 fn cap_query_real(pid: i64, caps: *anyopaque, count: *u32) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall3(
-            TRX_PROCESS_CAP_QUERY,
+            syscall.nr.TRX_PROCESS_CAP_QUERY,
             @bitCast(pid),
             @intFromPtr(caps),
             @intFromPtr(count),
@@ -103,9 +95,9 @@ pub export fn trx_cap_query(pid: i64, caps: *anyopaque, count: *u32) c_int {
 const testing = if (is_test) @import("std").testing else undefined;
 
 test "syscall numbers match genesis_syscall.h" {
-    try testing.expectEqual(@as(usize, 0x0105), TRX_PROCESS_CAP_GRANT);
-    try testing.expectEqual(@as(usize, 0x0106), TRX_PROCESS_CAP_REVOKE);
-    try testing.expectEqual(@as(usize, 0x0107), TRX_PROCESS_CAP_QUERY);
+    try testing.expectEqual(@as(usize, 0x0105), syscall.nr.TRX_PROCESS_CAP_GRANT);
+    try testing.expectEqual(@as(usize, 0x0106), syscall.nr.TRX_PROCESS_CAP_REVOKE);
+    try testing.expectEqual(@as(usize, 0x0107), syscall.nr.TRX_PROCESS_CAP_QUERY);
 }
 
 test "trx_cap_grant stub returns 0" {
