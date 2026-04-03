@@ -58,13 +58,13 @@ const poll_impl = if (is_test) poll_test else poll_real;
 // ---------------------------------------------------------------------------
 
 /// Wait for events on a set of file descriptors.
-export fn poll(fds: [*]pollfd, nfds: u32, timeout: c_int) c_int {
+pub export fn poll(fds: [*]pollfd, nfds: u32, timeout: c_int) c_int {
     return poll_impl(fds, nfds, timeout);
 }
 
 /// select(2) — convert fd_sets to pollfd array and call poll.
 /// TODO: Implement fd_set conversion. Stubbed with -ENOSYS for Phase 4.
-export fn select(nfds: c_int, readfds: ?*anyopaque, writefds: ?*anyopaque, exceptfds: ?*anyopaque, timeout: ?*anyopaque) c_int {
+pub export fn select(nfds: c_int, readfds: ?*anyopaque, writefds: ?*anyopaque, exceptfds: ?*anyopaque, timeout: ?*anyopaque) c_int {
     _ = nfds;
     _ = readfds;
     _ = writefds;

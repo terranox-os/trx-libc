@@ -134,32 +134,32 @@ const gpu_wait_fence_impl = if (is_test) gpu_wait_fence_test else gpu_wait_fence
 // ---------------------------------------------------------------------------
 
 /// Open a GPU device.
-export fn trx_gpu_open(dev_id: u32) i64 {
+pub export fn trx_gpu_open(dev_id: u32) i64 {
     return gpu_open_impl(dev_id);
 }
 
 /// Close a GPU device.
-export fn trx_gpu_close(handle: i64) c_int {
+pub export fn trx_gpu_close(handle: i64) c_int {
     return gpu_close_impl(handle);
 }
 
 /// Allocate a buffer object on the GPU.
-export fn trx_gpu_alloc_bo(handle: i64, size: u64, flags: u32) u32 {
+pub export fn trx_gpu_alloc_bo(handle: i64, size: u64, flags: u32) u32 {
     return gpu_alloc_bo_impl(handle, size, flags);
 }
 
 /// Free a buffer object.
-export fn trx_gpu_free_bo(handle: i64, bo_handle: u32) c_int {
+pub export fn trx_gpu_free_bo(handle: i64, bo_handle: u32) c_int {
     return gpu_free_bo_impl(handle, bo_handle);
 }
 
 /// Submit a command buffer to the GPU.
-export fn trx_gpu_submit(handle: i64, cmdbuf: [*]const u8, len: usize) i64 {
+pub export fn trx_gpu_submit(handle: i64, cmdbuf: [*]const u8, len: usize) i64 {
     return gpu_submit_impl(handle, cmdbuf, len);
 }
 
 /// Wait for a GPU fence to signal.
-export fn trx_gpu_wait_fence(fence: i64, timeout_ns: i64) c_int {
+pub export fn trx_gpu_wait_fence(fence: i64, timeout_ns: i64) c_int {
     return gpu_wait_fence_impl(fence, timeout_ns);
 }
 

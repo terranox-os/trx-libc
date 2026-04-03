@@ -82,17 +82,17 @@ const cap_query_impl = if (is_test) cap_query_test else cap_query_real;
 // ---------------------------------------------------------------------------
 
 /// Grant a capability to a process.
-export fn trx_cap_grant(pid: i64, cap_id: u64, rights: u64) c_int {
+pub export fn trx_cap_grant(pid: i64, cap_id: u64, rights: u64) c_int {
     return cap_grant_impl(pid, cap_id, rights);
 }
 
 /// Revoke a capability from a process.
-export fn trx_cap_revoke(pid: i64, cap_id: u64) c_int {
+pub export fn trx_cap_revoke(pid: i64, cap_id: u64) c_int {
     return cap_revoke_impl(pid, cap_id);
 }
 
 /// Query capabilities of a process.
-export fn trx_cap_query(pid: i64, caps: *anyopaque, count: *u32) c_int {
+pub export fn trx_cap_query(pid: i64, caps: *anyopaque, count: *u32) c_int {
     return cap_query_impl(pid, caps, count);
 }
 

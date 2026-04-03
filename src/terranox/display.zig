@@ -187,47 +187,47 @@ const buffer_unmap_impl = if (is_test) buffer_unmap_test else buffer_unmap_real;
 // ---------------------------------------------------------------------------
 
 /// Enumerate connected displays.
-export fn trx_display_enumerate(displays: *anyopaque, count: *u32) c_int {
+pub export fn trx_display_enumerate(displays: *anyopaque, count: *u32) c_int {
     return display_enumerate_impl(displays, count);
 }
 
 /// Set display mode.
-export fn trx_display_set_mode(display_id: u32, mode: *const anyopaque) c_int {
+pub export fn trx_display_set_mode(display_id: u32, mode: *const anyopaque) c_int {
     return display_set_mode_impl(display_id, mode);
 }
 
 /// Create a compositor instance.
-export fn trx_compositor_create(flags: u32) i64 {
+pub export fn trx_compositor_create(flags: u32) i64 {
     return compositor_create_impl(flags);
 }
 
 /// Present compositor layers.
-export fn trx_compositor_present(handle: i64, layers: *const anyopaque, count: u32) c_int {
+pub export fn trx_compositor_present(handle: i64, layers: *const anyopaque, count: u32) c_int {
     return compositor_present_impl(handle, layers, count);
 }
 
 /// Create a surface.
-export fn trx_surface_create(width: u32, height: u32, format: u32, flags: u32) i64 {
+pub export fn trx_surface_create(width: u32, height: u32, format: u32, flags: u32) i64 {
     return surface_create_impl(width, height, format, flags);
 }
 
 /// Destroy a surface.
-export fn trx_surface_destroy(handle: i64) c_int {
+pub export fn trx_surface_destroy(handle: i64) c_int {
     return surface_destroy_impl(handle);
 }
 
 /// Create a GPU buffer.
-export fn trx_buffer_create(width: u32, height: u32, format: u32, usage: u32) i64 {
+pub export fn trx_buffer_create(width: u32, height: u32, format: u32, usage: u32) i64 {
     return buffer_create_impl(width, height, format, usage);
 }
 
 /// Map a buffer into process address space.
-export fn trx_buffer_map(handle: i64, prot: u32) i64 {
+pub export fn trx_buffer_map(handle: i64, prot: u32) i64 {
     return buffer_map_impl(handle, prot);
 }
 
 /// Unmap a buffer from process address space.
-export fn trx_buffer_unmap(handle: i64) c_int {
+pub export fn trx_buffer_unmap(handle: i64) c_int {
     return buffer_unmap_impl(handle);
 }
 

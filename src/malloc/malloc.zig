@@ -443,7 +443,7 @@ fn min(a: usize, b: usize) usize {
 // Public API (C ABI exports)
 // ---------------------------------------------------------------------------
 
-fn mallocImpl(size: usize) ?*anyopaque {
+fn mallocImpl(size: usize) callconv(.C) ?*anyopaque {
     if (size == 0) return null;
 
     // Compute total chunk size needed.
@@ -468,7 +468,7 @@ fn mallocImpl(size: usize) ?*anyopaque {
     return null;
 }
 
-fn freeImpl(ptr: ?*anyopaque) void {
+fn freeImpl(ptr: ?*anyopaque) callconv(.C) void {
     if (ptr == null) return;
 
     const header_addr = userToChunk(ptr.?);
@@ -492,7 +492,7 @@ fn freeImpl(ptr: ?*anyopaque) void {
     }
 }
 
-fn callocImpl(nmemb: usize, size: usize) ?*anyopaque {
+fn callocImpl(nmemb: usize, size: usize) callconv(.C) ?*anyopaque {
     if (nmemb == 0 or size == 0) return null;
 
     // Overflow check.
@@ -510,7 +510,7 @@ fn callocImpl(nmemb: usize, size: usize) ?*anyopaque {
     return p;
 }
 
-fn reallocImpl(ptr: ?*anyopaque, size: usize) ?*anyopaque {
+fn reallocImpl(ptr: ?*anyopaque, size: usize) callconv(.C) ?*anyopaque {
     if (ptr == null) return mallocImpl(size);
 
     if (size == 0) {

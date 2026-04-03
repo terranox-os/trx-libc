@@ -4,21 +4,21 @@ const syscall = @import("../internal/syscall.zig");
 const errno_mod = @import("../errno/errno.zig");
 
 /// Write bytes to a file descriptor.
-export fn write(fd: c_int, buf: [*]const u8, count: usize) isize {
+pub export fn write(fd: c_int, buf: [*]const u8, count: usize) isize {
     return errno_mod.syscall_ret(
         syscall.syscall3(syscall.nr.WRITE, @intCast(fd), @intFromPtr(buf), count),
     );
 }
 
 /// Read bytes from a file descriptor.
-export fn read(fd: c_int, buf: [*]u8, count: usize) isize {
+pub export fn read(fd: c_int, buf: [*]u8, count: usize) isize {
     return errno_mod.syscall_ret(
         syscall.syscall3(syscall.nr.READ, @intCast(fd), @intFromPtr(buf), count),
     );
 }
 
 /// Close a file descriptor.
-export fn close(fd: c_int) c_int {
+pub export fn close(fd: c_int) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall1(syscall.nr.CLOSE, @intCast(fd)),
     );
@@ -26,7 +26,7 @@ export fn close(fd: c_int) c_int {
 }
 
 /// Reposition file offset.
-export fn lseek(fd: c_int, offset: i64, whence: c_int) i64 {
+pub export fn lseek(fd: c_int, offset: i64, whence: c_int) i64 {
     const raw = syscall.syscall3(
         syscall.nr.LSEEK,
         @intCast(fd),
@@ -42,7 +42,7 @@ export fn lseek(fd: c_int, offset: i64, whence: c_int) i64 {
 }
 
 /// Delete a name from the filesystem.
-export fn unlink(path: [*:0]const u8) c_int {
+pub export fn unlink(path: [*:0]const u8) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall1(syscall.nr.TRX_FS_UNLINK, @intFromPtr(path)),
     );
@@ -50,7 +50,7 @@ export fn unlink(path: [*:0]const u8) c_int {
 }
 
 /// Return the process ID of the calling process.
-export fn getpid() c_int {
+pub export fn getpid() c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall0(syscall.nr.GETPID),
     );
@@ -58,7 +58,7 @@ export fn getpid() c_int {
 }
 
 /// Duplicate a file descriptor.
-export fn dup2(oldfd: c_int, newfd: c_int) c_int {
+pub export fn dup2(oldfd: c_int, newfd: c_int) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall2(syscall.nr.DUP2, @intCast(oldfd), @intCast(newfd)),
     );
@@ -66,7 +66,7 @@ export fn dup2(oldfd: c_int, newfd: c_int) c_int {
 }
 
 /// Create a pipe.
-export fn pipe(pipefd: *[2]c_int) c_int {
+pub export fn pipe(pipefd: *[2]c_int) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall1(syscall.nr.PIPE, @intFromPtr(pipefd)),
     );
@@ -78,7 +78,7 @@ const _SC_PAGE_SIZE: c_int = 30;
 
 /// Get configurable system variables.
 /// Returns hardcoded values — no syscall needed.
-export fn sysconf(name: c_int) c_long {
+pub export fn sysconf(name: c_int) c_long {
     if (name == _SC_PAGE_SIZE) return 4096;
     errno_mod.errno = errno_mod.EINVAL;
     return -1;

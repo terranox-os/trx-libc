@@ -107,14 +107,14 @@ fn spinLoopHint() void {
 // State 2: locked, has waiters
 // ---------------------------------------------------------------------------
 
-export fn pthread_mutex_init(mutex: *pthread_mutex_t, attr: ?*const anyopaque) c_int {
+pub export fn pthread_mutex_init(mutex: *pthread_mutex_t, attr: ?*const anyopaque) c_int {
     _ = attr;
     mutex.state = 0;
     mutex._pad = [_]u8{0} ** 28;
     return 0;
 }
 
-export fn pthread_mutex_lock(mutex: *pthread_mutex_t) c_int {
+pub export fn pthread_mutex_lock(mutex: *pthread_mutex_t) c_int {
     // Fast path: CAS 0 -> 1 (uncontended acquisition)
     if (@cmpxchgStrong(u32, &mutex.state, 0, 1, .acquire, .monotonic) == null) {
         return 0;
@@ -134,7 +134,7 @@ export fn pthread_mutex_lock(mutex: *pthread_mutex_t) c_int {
     }
 }
 
-export fn pthread_mutex_trylock(mutex: *pthread_mutex_t) c_int {
+pub export fn pthread_mutex_trylock(mutex: *pthread_mutex_t) c_int {
     // Try CAS 0 -> 1
     if (@cmpxchgStrong(u32, &mutex.state, 0, 1, .acquire, .monotonic) == null) {
         return 0;
@@ -143,7 +143,7 @@ export fn pthread_mutex_trylock(mutex: *pthread_mutex_t) c_int {
     return errno_mod.EBUSY;
 }
 
-export fn pthread_mutex_unlock(mutex: *pthread_mutex_t) c_int {
+pub export fn pthread_mutex_unlock(mutex: *pthread_mutex_t) c_int {
     // Atomic exchange to 0 and check previous value
     const prev = @atomicRmw(u32, &mutex.state, .Xchg, 0, .release);
 
@@ -155,7 +155,7 @@ export fn pthread_mutex_unlock(mutex: *pthread_mutex_t) c_int {
     return 0;
 }
 
-export fn pthread_mutex_destroy(mutex: *pthread_mutex_t) c_int {
+pub export fn pthread_mutex_destroy(mutex: *pthread_mutex_t) c_int {
     mutex.state = 0;
     return 0;
 }
@@ -169,14 +169,14 @@ export fn pthread_mutex_destroy(mutex: *pthread_mutex_t) c_int {
 // - cond_broadcast: increment seq, wake all
 // ---------------------------------------------------------------------------
 
-export fn pthread_cond_init(cond: *pthread_cond_t, attr: ?*const anyopaque) c_int {
+pub export fn pthread_cond_init(cond: *pthread_cond_t, attr: ?*const anyopaque) c_int {
     _ = attr;
     cond.seq = 0;
     cond._pad = [_]u8{0} ** 28;
     return 0;
 }
 
-export fn pthread_cond_wait(cond: *pthread_cond_t, mutex: *pthread_mutex_t) c_int {
+pub export fn pthread_cond_wait(cond: *pthread_cond_t, mutex: *pthread_mutex_t) c_int {
     const saved_seq = @atomicLoad(u32, &cond.seq, .acquire);
 
     // Release mutex
@@ -191,19 +191,19 @@ export fn pthread_cond_wait(cond: *pthread_cond_t, mutex: *pthread_mutex_t) c_in
     return 0;
 }
 
-export fn pthread_cond_signal(cond: *pthread_cond_t) c_int {
+pub export fn pthread_cond_signal(cond: *pthread_cond_t) c_int {
     _ = @atomicRmw(u32, &cond.seq, .Add, 1, .release);
     futex_wake(&cond.seq, 1);
     return 0;
 }
 
-export fn pthread_cond_broadcast(cond: *pthread_cond_t) c_int {
+pub export fn pthread_cond_broadcast(cond: *pthread_cond_t) c_int {
     _ = @atomicRmw(u32, &cond.seq, .Add, 1, .release);
     futex_wake(&cond.seq, 0x7FFFFFFF); // wake all waiters
     return 0;
 }
 
-export fn pthread_cond_destroy(cond: *pthread_cond_t) c_int {
+pub export fn pthread_cond_destroy(cond: *pthread_cond_t) c_int {
     cond.seq = 0;
     return 0;
 }
@@ -318,23 +318,23 @@ const thread_exit_impl = if (is_test) thread_exit_test else thread_exit_real;
 const thread_self_impl = if (is_test) thread_self_test else thread_self_real;
 const thread_yield_impl = if (is_test) thread_yield_test else thread_yield_real;
 
-export fn pthread_create(thread: *pthread_t, attr: ?*const pthread_attr_t, start_routine: *const fn (?*anyopaque) callconv(.C) ?*anyopaque, arg: ?*anyopaque) c_int {
+pub export fn pthread_create(thread: *pthread_t, attr: ?*const pthread_attr_t, start_routine: *const fn (?*anyopaque) callconv(.C) ?*anyopaque, arg: ?*anyopaque) c_int {
     return thread_create_impl(thread, attr, start_routine, arg);
 }
 
-export fn pthread_join(thread: pthread_t, retval: ?*?*anyopaque) c_int {
+pub export fn pthread_join(thread: pthread_t, retval: ?*?*anyopaque) c_int {
     return thread_join_impl(thread, retval);
 }
 
-export fn pthread_exit(retval: ?*anyopaque) noreturn {
+pub export fn pthread_exit(retval: ?*anyopaque) noreturn {
     thread_exit_impl(retval);
 }
 
-export fn pthread_self() pthread_t {
+pub export fn pthread_self() pthread_t {
     return thread_self_impl();
 }
 
-export fn pthread_yield() c_int {
+pub export fn pthread_yield() c_int {
     return thread_yield_impl();
 }
 
@@ -354,7 +354,7 @@ const KeySlot = struct {
 var tsd_slots: [PTHREAD_KEYS_MAX]KeySlot = [_]KeySlot{.{}} ** PTHREAD_KEYS_MAX;
 var tsd_next_key: u32 = 0;
 
-export fn pthread_key_create(key: *pthread_key_t, destructor: ?*const fn (?*anyopaque) callconv(.C) void) c_int {
+pub export fn pthread_key_create(key: *pthread_key_t, destructor: ?*const fn (?*anyopaque) callconv(.C) void) c_int {
     // Find a free slot
     var i: u32 = 0;
     while (i < PTHREAD_KEYS_MAX) : (i += 1) {
@@ -373,7 +373,7 @@ export fn pthread_key_create(key: *pthread_key_t, destructor: ?*const fn (?*anyo
     return errno_mod.EAGAIN; // no free keys
 }
 
-export fn pthread_key_delete(key: pthread_key_t) c_int {
+pub export fn pthread_key_delete(key: pthread_key_t) c_int {
     if (key >= PTHREAD_KEYS_MAX) return errno_mod.EINVAL;
     if (!tsd_slots[key].in_use) return errno_mod.EINVAL;
 
@@ -381,7 +381,7 @@ export fn pthread_key_delete(key: pthread_key_t) c_int {
     return 0;
 }
 
-export fn pthread_setspecific(key: pthread_key_t, value: ?*const anyopaque) c_int {
+pub export fn pthread_setspecific(key: pthread_key_t, value: ?*const anyopaque) c_int {
     if (key >= PTHREAD_KEYS_MAX) return errno_mod.EINVAL;
     if (!tsd_slots[key].in_use) return errno_mod.EINVAL;
 
@@ -389,7 +389,7 @@ export fn pthread_setspecific(key: pthread_key_t, value: ?*const anyopaque) c_in
     return 0;
 }
 
-export fn pthread_getspecific(key: pthread_key_t) ?*anyopaque {
+pub export fn pthread_getspecific(key: pthread_key_t) ?*anyopaque {
     if (key >= PTHREAD_KEYS_MAX) return null;
     if (!tsd_slots[key].in_use) return null;
 
@@ -400,7 +400,7 @@ export fn pthread_getspecific(key: pthread_key_t) ?*anyopaque {
 // Once
 // ---------------------------------------------------------------------------
 
-export fn pthread_once(once: *pthread_once_t, init_routine: *const fn () callconv(.C) void) c_int {
+pub export fn pthread_once(once: *pthread_once_t, init_routine: *const fn () callconv(.C) void) c_int {
     // Fast path: already complete
     if (@atomicLoad(u32, once, .acquire) == ONCE_COMPLETE) {
         return 0;

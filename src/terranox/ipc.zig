@@ -155,37 +155,37 @@ const signal_wait_impl = if (is_test) signal_wait_test else signal_wait_real;
 // ---------------------------------------------------------------------------
 
 /// Create a bidirectional IPC channel.
-export fn trx_channel_create(flags: u32, ep0: *i64, ep1: *i64) c_int {
+pub export fn trx_channel_create(flags: u32, ep0: *i64, ep1: *i64) c_int {
     return channel_create_impl(flags, ep0, ep1);
 }
 
 /// Send data on a channel endpoint.
-export fn trx_channel_send(ep: i64, data: [*]const u8, len: usize) c_int {
+pub export fn trx_channel_send(ep: i64, data: [*]const u8, len: usize) c_int {
     return channel_send_impl(ep, data, len);
 }
 
 /// Receive data from a channel endpoint.
-export fn trx_channel_recv(ep: i64, buf: [*]u8, buf_len: usize) i64 {
+pub export fn trx_channel_recv(ep: i64, buf: [*]u8, buf_len: usize) i64 {
     return channel_recv_impl(ep, buf, buf_len);
 }
 
 /// Close a channel endpoint.
-export fn trx_channel_close(ep: i64) c_int {
+pub export fn trx_channel_close(ep: i64) c_int {
     return channel_close_impl(ep);
 }
 
 /// Create a kernel signal object.
-export fn trx_signal_create(flags: u32) i64 {
+pub export fn trx_signal_create(flags: u32) i64 {
     return signal_create_impl(flags);
 }
 
 /// Raise bits on a signal object.
-export fn trx_signal_raise(handle: i64, bits: u32) c_int {
+pub export fn trx_signal_raise(handle: i64, bits: u32) c_int {
     return signal_raise_impl(handle, bits);
 }
 
 /// Wait for signal bits with timeout.
-export fn trx_signal_wait(handle: i64, mask: u32, timeout_ns: i64) i64 {
+pub export fn trx_signal_wait(handle: i64, mask: u32, timeout_ns: i64) i64 {
     return signal_wait_impl(handle, mask, timeout_ns);
 }
 

@@ -95,7 +95,7 @@ const kill_impl = if (is_test) kill_test else kill_real;
 // ---------------------------------------------------------------------------
 
 /// Install a signal handler, returning the previous handler.
-export fn signal(sig: c_int, handler: sighandler_t) sighandler_t {
+pub export fn signal(sig: c_int, handler: sighandler_t) sighandler_t {
     if (!valid_sig(sig) or sig == SIGKILL or sig == SIGSTOP) {
         errno_mod.errno = errno_mod.EINVAL;
         return SIG_DFL;
@@ -107,7 +107,7 @@ export fn signal(sig: c_int, handler: sighandler_t) sighandler_t {
 }
 
 /// Examine and change a signal action.
-export fn sigaction(sig: c_int, act: ?*const sigaction_t, oldact: ?*sigaction_t) c_int {
+pub export fn sigaction(sig: c_int, act: ?*const sigaction_t, oldact: ?*sigaction_t) c_int {
     if (!valid_sig(sig) or sig == SIGKILL or sig == SIGSTOP) {
         errno_mod.errno = errno_mod.EINVAL;
         return -1;
@@ -123,12 +123,12 @@ export fn sigaction(sig: c_int, act: ?*const sigaction_t, oldact: ?*sigaction_t)
 }
 
 /// Send a signal to a process.
-export fn kill(pid: c_int, sig: c_int) c_int {
+pub export fn kill(pid: c_int, sig: c_int) c_int {
     return kill_impl(pid, sig);
 }
 
 /// Send a signal to the calling process.
-export fn raise(sig: c_int) c_int {
+pub export fn raise(sig: c_int) c_int {
     // Import getpid from unistd
     const getpid_fn = @extern(*const fn () callconv(.C) c_int, .{ .name = "getpid" });
     if (is_test) {
@@ -139,19 +139,19 @@ export fn raise(sig: c_int) c_int {
 }
 
 /// Initialize a signal set to empty.
-export fn sigemptyset(set: *sigset_t) c_int {
+pub export fn sigemptyset(set: *sigset_t) c_int {
     set.* = 0;
     return 0;
 }
 
 /// Initialize a signal set to full (all signals).
-export fn sigfillset(set: *sigset_t) c_int {
+pub export fn sigfillset(set: *sigset_t) c_int {
     set.* = ~@as(sigset_t, 0);
     return 0;
 }
 
 /// Add a signal to a signal set.
-export fn sigaddset(set: *sigset_t, sig: c_int) c_int {
+pub export fn sigaddset(set: *sigset_t, sig: c_int) c_int {
     if (!valid_sig(sig)) {
         errno_mod.errno = errno_mod.EINVAL;
         return -1;
@@ -161,7 +161,7 @@ export fn sigaddset(set: *sigset_t, sig: c_int) c_int {
 }
 
 /// Remove a signal from a signal set.
-export fn sigdelset(set: *sigset_t, sig: c_int) c_int {
+pub export fn sigdelset(set: *sigset_t, sig: c_int) c_int {
     if (!valid_sig(sig)) {
         errno_mod.errno = errno_mod.EINVAL;
         return -1;
@@ -171,7 +171,7 @@ export fn sigdelset(set: *sigset_t, sig: c_int) c_int {
 }
 
 /// Test whether a signal is a member of a signal set.
-export fn sigismember(set: *const sigset_t, sig: c_int) c_int {
+pub export fn sigismember(set: *const sigset_t, sig: c_int) c_int {
     if (!valid_sig(sig)) {
         errno_mod.errno = errno_mod.EINVAL;
         return -1;

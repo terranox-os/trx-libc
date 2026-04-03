@@ -31,6 +31,35 @@ pub const trx_input = @import("terranox/input.zig");
 pub const trx_gpu = @import("terranox/gpu.zig");
 pub const trx_ipc = @import("terranox/ipc.zig");
 
+// Force Zig's lazy evaluator to analyze all modules containing export fn.
+// Without this, LLVM never sees the exported symbols and the .a archive
+// is empty. This is the same pattern used by Zig's own std.zig:
+//   comptime { _ = start; }
+// See: https://github.com/ziglang/zig/issues/8508
+comptime {
+    _ = @import("internal/syscall.zig");
+    _ = @import("errno/errno.zig");
+    _ = @import("crt/crt.zig");
+    _ = @import("unistd/unistd.zig");
+    _ = @import("misc/misc.zig");
+    _ = @import("string/string.zig");
+    _ = @import("stdlib/stdlib.zig");
+    _ = @import("ctype/ctype.zig");
+    _ = @import("fcntl/fcntl.zig");
+    _ = @import("sys/stat.zig");
+    _ = @import("stdio/stdio.zig");
+    _ = @import("malloc/malloc.zig");
+    _ = @import("pthread/pthread.zig");
+    _ = @import("net/net.zig");
+    _ = @import("poll/poll.zig");
+    _ = @import("signal/signal.zig");
+    _ = @import("terranox/capability.zig");
+    _ = @import("terranox/display.zig");
+    _ = @import("terranox/input.zig");
+    _ = @import("terranox/gpu.zig");
+    _ = @import("terranox/ipc.zig");
+}
+
 // Re-export for tests
 test {
     _ = syscall;

@@ -126,32 +126,32 @@ const input_ungrab_impl = if (is_test) input_ungrab_test else input_ungrab_real;
 // ---------------------------------------------------------------------------
 
 /// Enumerate available input devices.
-export fn trx_input_enumerate(devices: *anyopaque, count: *u32) c_int {
+pub export fn trx_input_enumerate(devices: *anyopaque, count: *u32) c_int {
     return input_enumerate_impl(devices, count);
 }
 
 /// Open an input device.
-export fn trx_input_open(dev_id: u32, flags: u32) i64 {
+pub export fn trx_input_open(dev_id: u32, flags: u32) i64 {
     return input_open_impl(dev_id, flags);
 }
 
 /// Close an input device.
-export fn trx_input_close(handle: i64) c_int {
+pub export fn trx_input_close(handle: i64) c_int {
     return input_close_impl(handle);
 }
 
 /// Read input events from a device.
-export fn trx_input_read_events(handle: i64, events: *anyopaque, max: u32) i64 {
+pub export fn trx_input_read_events(handle: i64, events: *anyopaque, max: u32) i64 {
     return input_read_events_impl(handle, events, max);
 }
 
 /// Grab exclusive access to an input device.
-export fn trx_input_grab(handle: i64) c_int {
+pub export fn trx_input_grab(handle: i64) c_int {
     return input_grab_impl(handle);
 }
 
 /// Release exclusive access to an input device.
-export fn trx_input_ungrab(handle: i64) c_int {
+pub export fn trx_input_ungrab(handle: i64) c_int {
     return input_ungrab_impl(handle);
 }
 
