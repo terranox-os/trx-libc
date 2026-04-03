@@ -20,18 +20,6 @@ const syscall = @import("../internal/syscall.zig");
 const errno_mod = @import("../errno/errno.zig");
 const malloc_mod = @import("../malloc/malloc.zig");
 
-// ---------------------------------------------------------------------------
-// TRX syscall numbers (available in genesis_syscall.h)
-// ---------------------------------------------------------------------------
-
-const SYS_TRX_THREAD_CREATE: usize = 0x0110;
-const SYS_TRX_THREAD_EXIT: usize = 0x0111;
-const SYS_TRX_THREAD_JOIN: usize = 0x0112;
-const SYS_TRX_FUTEX_WAIT: usize = 0x0117;
-const SYS_TRX_FUTEX_WAKE: usize = 0x0118;
-const SYS_YIELD: usize = 0x0005;
-const SYS_MMAP: usize = 0x0003;
-const SYS_MUNMAP: usize = 0x0004;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,7 +57,7 @@ const ONCE_COMPLETE: u32 = 2;
 
 fn futex_wait_real(addr: *const u32, expected: u32) void {
     _ = syscall.syscall3(
-        SYS_TRX_FUTEX_WAIT,
+        syscall.nr.TRX_FUTEX_WAIT,
         @intFromPtr(addr),
         @as(usize, expected),
         0, // no timeout
@@ -78,7 +66,7 @@ fn futex_wait_real(addr: *const u32, expected: u32) void {
 
 fn futex_wake_real(addr: *const u32, count: u32) void {
     _ = syscall.syscall2(
-        SYS_TRX_FUTEX_WAKE,
+        syscall.nr.TRX_FUTEX_WAKE,
         @intFromPtr(addr),
         @as(usize, count),
     );
@@ -221,7 +209,7 @@ fn thread_create_real(thread: *pthread_t, attr: ?*const pthread_attr_t, start_ro
     const total_sz = stack_sz + guard_sz;
 
     const raw = syscall.syscall6(
-        SYS_MMAP,
+        syscall.nr.MMAP,
         0, // addr hint
         total_sz,
         3, // PROT_READ | PROT_WRITE
@@ -240,7 +228,7 @@ fn thread_create_real(thread: *pthread_t, attr: ?*const pthread_attr_t, start_ro
 
     // Call trx_thread_create syscall
     const ret_raw = syscall.syscall4(
-        SYS_TRX_THREAD_CREATE,
+        syscall.nr.TRX_THREAD_CREATE,
         @intFromPtr(start_routine),
         stack_top,
         stack_sz,
@@ -249,7 +237,7 @@ fn thread_create_real(thread: *pthread_t, attr: ?*const pthread_attr_t, start_ro
     const ret_signed: isize = @bitCast(ret_raw);
     if (ret_signed < 0 and ret_signed > -4096) {
         // Clean up the stack
-        _ = syscall.syscall2(SYS_MUNMAP, raw, total_sz);
+        _ = syscall.syscall2(syscall.nr.MUNMAP, raw, total_sz);
         errno_mod.errno = @intCast(-ret_signed);
         return @intCast(-ret_signed);
     }
@@ -260,7 +248,7 @@ fn thread_create_real(thread: *pthread_t, attr: ?*const pthread_attr_t, start_ro
 
 fn thread_join_real(thread: pthread_t, retval: ?*?*anyopaque) c_int {
     const raw = syscall.syscall2(
-        SYS_TRX_THREAD_JOIN,
+        syscall.nr.TRX_THREAD_JOIN,
         @intCast(thread),
         if (retval) |r| @intFromPtr(r) else 0,
     );
@@ -273,19 +261,19 @@ fn thread_join_real(thread: pthread_t, retval: ?*?*anyopaque) c_int {
 }
 
 fn thread_exit_real(retval: ?*anyopaque) noreturn {
-    _ = syscall.syscall1(SYS_TRX_THREAD_EXIT, @intFromPtr(retval));
+    _ = syscall.syscall1(syscall.nr.TRX_THREAD_EXIT, @intFromPtr(retval));
     unreachable;
 }
 
 fn thread_self_real() pthread_t {
     // Use getpid as a fallback for thread ID in single-threaded contexts.
     // A real implementation would use a TLS field set by thread_create.
-    const raw = syscall.syscall0(0x0006); // GEN_SYS_GETPID
+    const raw = syscall.syscall0(syscall.nr.GETPID);
     return @intCast(raw);
 }
 
 fn thread_yield_real() c_int {
-    _ = syscall.syscall0(SYS_YIELD);
+    _ = syscall.syscall0(syscall.nr.YIELD);
     return 0;
 }
 

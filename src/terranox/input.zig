@@ -10,24 +10,13 @@ const syscall = @import("../internal/syscall.zig");
 const errno_mod = @import("../errno/errno.zig");
 
 // ---------------------------------------------------------------------------
-// Syscall numbers (from genesis_syscall.h)
-// ---------------------------------------------------------------------------
-
-const TRX_INPUT_ENUMERATE: usize = 0x0160;
-const TRX_INPUT_OPEN: usize = 0x0161;
-const TRX_INPUT_CLOSE: usize = 0x0162;
-const TRX_INPUT_READ_EVENTS: usize = 0x0163;
-const TRX_INPUT_GRAB: usize = 0x0164;
-const TRX_INPUT_UNGRAB: usize = 0x0165;
-
-// ---------------------------------------------------------------------------
 // Real implementations
 // ---------------------------------------------------------------------------
 
 fn input_enumerate_real(devices: *anyopaque, count: *u32) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall2(
-            TRX_INPUT_ENUMERATE,
+            syscall.nr.TRX_INPUT_ENUMERATE,
             @intFromPtr(devices),
             @intFromPtr(count),
         ),
@@ -37,7 +26,7 @@ fn input_enumerate_real(devices: *anyopaque, count: *u32) c_int {
 
 fn input_open_real(dev_id: u32, flags: u32) i64 {
     const raw = syscall.syscall2(
-        TRX_INPUT_OPEN,
+        syscall.nr.TRX_INPUT_OPEN,
         @as(usize, dev_id),
         @as(usize, flags),
     );
@@ -51,14 +40,14 @@ fn input_open_real(dev_id: u32, flags: u32) i64 {
 
 fn input_close_real(handle: i64) c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall1(TRX_INPUT_CLOSE, @bitCast(handle)),
+        syscall.syscall1(syscall.nr.TRX_INPUT_CLOSE, @bitCast(handle)),
     );
     return @intCast(ret);
 }
 
 fn input_read_events_real(handle: i64, events: *anyopaque, max: u32) i64 {
     const raw = syscall.syscall3(
-        TRX_INPUT_READ_EVENTS,
+        syscall.nr.TRX_INPUT_READ_EVENTS,
         @bitCast(handle),
         @intFromPtr(events),
         @as(usize, max),
@@ -73,14 +62,14 @@ fn input_read_events_real(handle: i64, events: *anyopaque, max: u32) i64 {
 
 fn input_grab_real(handle: i64) c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall1(TRX_INPUT_GRAB, @bitCast(handle)),
+        syscall.syscall1(syscall.nr.TRX_INPUT_GRAB, @bitCast(handle)),
     );
     return @intCast(ret);
 }
 
 fn input_ungrab_real(handle: i64) c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall1(TRX_INPUT_UNGRAB, @bitCast(handle)),
+        syscall.syscall1(syscall.nr.TRX_INPUT_UNGRAB, @bitCast(handle)),
     );
     return @intCast(ret);
 }
@@ -162,12 +151,12 @@ pub export fn trx_input_ungrab(handle: i64) c_int {
 const testing = if (is_test) @import("std").testing else undefined;
 
 test "input syscall numbers" {
-    try testing.expectEqual(@as(usize, 0x0160), TRX_INPUT_ENUMERATE);
-    try testing.expectEqual(@as(usize, 0x0161), TRX_INPUT_OPEN);
-    try testing.expectEqual(@as(usize, 0x0162), TRX_INPUT_CLOSE);
-    try testing.expectEqual(@as(usize, 0x0163), TRX_INPUT_READ_EVENTS);
-    try testing.expectEqual(@as(usize, 0x0164), TRX_INPUT_GRAB);
-    try testing.expectEqual(@as(usize, 0x0165), TRX_INPUT_UNGRAB);
+    try testing.expectEqual(@as(usize, 0x0160), syscall.nr.TRX_INPUT_ENUMERATE);
+    try testing.expectEqual(@as(usize, 0x0161), syscall.nr.TRX_INPUT_OPEN);
+    try testing.expectEqual(@as(usize, 0x0162), syscall.nr.TRX_INPUT_CLOSE);
+    try testing.expectEqual(@as(usize, 0x0163), syscall.nr.TRX_INPUT_READ_EVENTS);
+    try testing.expectEqual(@as(usize, 0x0164), syscall.nr.TRX_INPUT_GRAB);
+    try testing.expectEqual(@as(usize, 0x0165), syscall.nr.TRX_INPUT_UNGRAB);
 }
 
 test "trx_input_enumerate stub returns 0" {

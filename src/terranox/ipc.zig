@@ -11,25 +11,13 @@ const syscall = @import("../internal/syscall.zig");
 const errno_mod = @import("../errno/errno.zig");
 
 // ---------------------------------------------------------------------------
-// Syscall numbers (from genesis_syscall.h)
-// ---------------------------------------------------------------------------
-
-const TRX_CHANNEL_CREATE: usize = 0x0130;
-const TRX_CHANNEL_SEND: usize = 0x0131;
-const TRX_CHANNEL_RECV: usize = 0x0132;
-const TRX_CHANNEL_CLOSE: usize = 0x0133;
-const TRX_SIGNAL_CREATE: usize = 0x0135;
-const TRX_SIGNAL_RAISE: usize = 0x0136;
-const TRX_SIGNAL_WAIT: usize = 0x0137;
-
-// ---------------------------------------------------------------------------
 // Real implementations
 // ---------------------------------------------------------------------------
 
 fn channel_create_real(flags: u32, ep0: *i64, ep1: *i64) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall3(
-            TRX_CHANNEL_CREATE,
+            syscall.nr.TRX_CHANNEL_CREATE,
             @as(usize, flags),
             @intFromPtr(ep0),
             @intFromPtr(ep1),
@@ -41,7 +29,7 @@ fn channel_create_real(flags: u32, ep0: *i64, ep1: *i64) c_int {
 fn channel_send_real(ep: i64, data: [*]const u8, len: usize) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall3(
-            TRX_CHANNEL_SEND,
+            syscall.nr.TRX_CHANNEL_SEND,
             @bitCast(ep),
             @intFromPtr(data),
             len,
@@ -52,7 +40,7 @@ fn channel_send_real(ep: i64, data: [*]const u8, len: usize) c_int {
 
 fn channel_recv_real(ep: i64, buf: [*]u8, buf_len: usize) i64 {
     const raw = syscall.syscall3(
-        TRX_CHANNEL_RECV,
+        syscall.nr.TRX_CHANNEL_RECV,
         @bitCast(ep),
         @intFromPtr(buf),
         buf_len,
@@ -67,13 +55,13 @@ fn channel_recv_real(ep: i64, buf: [*]u8, buf_len: usize) i64 {
 
 fn channel_close_real(ep: i64) c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall1(TRX_CHANNEL_CLOSE, @bitCast(ep)),
+        syscall.syscall1(syscall.nr.TRX_CHANNEL_CLOSE, @bitCast(ep)),
     );
     return @intCast(ret);
 }
 
 fn signal_create_real(flags: u32) i64 {
-    const raw = syscall.syscall1(TRX_SIGNAL_CREATE, @as(usize, flags));
+    const raw = syscall.syscall1(syscall.nr.TRX_SIGNAL_CREATE, @as(usize, flags));
     const signed: isize = @bitCast(raw);
     if (signed < 0 and signed > -4096) {
         errno_mod.errno = @intCast(-signed);
@@ -85,7 +73,7 @@ fn signal_create_real(flags: u32) i64 {
 fn signal_raise_real(handle: i64, bits: u32) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall2(
-            TRX_SIGNAL_RAISE,
+            syscall.nr.TRX_SIGNAL_RAISE,
             @bitCast(handle),
             @as(usize, bits),
         ),
@@ -95,7 +83,7 @@ fn signal_raise_real(handle: i64, bits: u32) c_int {
 
 fn signal_wait_real(handle: i64, mask: u32, timeout_ns: i64) i64 {
     const raw = syscall.syscall3(
-        TRX_SIGNAL_WAIT,
+        syscall.nr.TRX_SIGNAL_WAIT,
         @bitCast(handle),
         @as(usize, mask),
         @bitCast(timeout_ns),
@@ -196,13 +184,13 @@ pub export fn trx_signal_wait(handle: i64, mask: u32, timeout_ns: i64) i64 {
 const testing = if (is_test) @import("std").testing else undefined;
 
 test "IPC syscall numbers" {
-    try testing.expectEqual(@as(usize, 0x0130), TRX_CHANNEL_CREATE);
-    try testing.expectEqual(@as(usize, 0x0131), TRX_CHANNEL_SEND);
-    try testing.expectEqual(@as(usize, 0x0132), TRX_CHANNEL_RECV);
-    try testing.expectEqual(@as(usize, 0x0133), TRX_CHANNEL_CLOSE);
-    try testing.expectEqual(@as(usize, 0x0135), TRX_SIGNAL_CREATE);
-    try testing.expectEqual(@as(usize, 0x0136), TRX_SIGNAL_RAISE);
-    try testing.expectEqual(@as(usize, 0x0137), TRX_SIGNAL_WAIT);
+    try testing.expectEqual(@as(usize, 0x0130), syscall.nr.TRX_CHANNEL_CREATE);
+    try testing.expectEqual(@as(usize, 0x0131), syscall.nr.TRX_CHANNEL_SEND);
+    try testing.expectEqual(@as(usize, 0x0132), syscall.nr.TRX_CHANNEL_RECV);
+    try testing.expectEqual(@as(usize, 0x0133), syscall.nr.TRX_CHANNEL_CLOSE);
+    try testing.expectEqual(@as(usize, 0x0135), syscall.nr.TRX_SIGNAL_CREATE);
+    try testing.expectEqual(@as(usize, 0x0136), syscall.nr.TRX_SIGNAL_RAISE);
+    try testing.expectEqual(@as(usize, 0x0137), syscall.nr.TRX_SIGNAL_WAIT);
 }
 
 test "trx_channel_create stub returns endpoints" {

@@ -11,22 +11,11 @@ const syscall = @import("../internal/syscall.zig");
 const errno_mod = @import("../errno/errno.zig");
 
 // ---------------------------------------------------------------------------
-// Syscall numbers (from genesis_syscall.h)
-// ---------------------------------------------------------------------------
-
-const TRX_GPU_OPEN: usize = 0x0170;
-const TRX_GPU_CLOSE: usize = 0x0171;
-const TRX_GPU_ALLOC_BO: usize = 0x0172;
-const TRX_GPU_FREE_BO: usize = 0x0173;
-const TRX_GPU_SUBMIT: usize = 0x0175;
-const TRX_GPU_WAIT_FENCE: usize = 0x0176;
-
-// ---------------------------------------------------------------------------
 // Real implementations
 // ---------------------------------------------------------------------------
 
 fn gpu_open_real(dev_id: u32) i64 {
-    const raw = syscall.syscall1(TRX_GPU_OPEN, @as(usize, dev_id));
+    const raw = syscall.syscall1(syscall.nr.TRX_GPU_OPEN, @as(usize, dev_id));
     const signed: isize = @bitCast(raw);
     if (signed < 0 and signed > -4096) {
         errno_mod.errno = @intCast(-signed);
@@ -37,14 +26,14 @@ fn gpu_open_real(dev_id: u32) i64 {
 
 fn gpu_close_real(handle: i64) c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall1(TRX_GPU_CLOSE, @bitCast(handle)),
+        syscall.syscall1(syscall.nr.TRX_GPU_CLOSE, @bitCast(handle)),
     );
     return @intCast(ret);
 }
 
 fn gpu_alloc_bo_real(handle: i64, size: u64, flags: u32) u32 {
     const raw = syscall.syscall3(
-        TRX_GPU_ALLOC_BO,
+        syscall.nr.TRX_GPU_ALLOC_BO,
         @bitCast(handle),
         size,
         @as(usize, flags),
@@ -60,7 +49,7 @@ fn gpu_alloc_bo_real(handle: i64, size: u64, flags: u32) u32 {
 fn gpu_free_bo_real(handle: i64, bo_handle: u32) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall2(
-            TRX_GPU_FREE_BO,
+            syscall.nr.TRX_GPU_FREE_BO,
             @bitCast(handle),
             @as(usize, bo_handle),
         ),
@@ -70,7 +59,7 @@ fn gpu_free_bo_real(handle: i64, bo_handle: u32) c_int {
 
 fn gpu_submit_real(handle: i64, cmdbuf: [*]const u8, len: usize) i64 {
     const raw = syscall.syscall3(
-        TRX_GPU_SUBMIT,
+        syscall.nr.TRX_GPU_SUBMIT,
         @bitCast(handle),
         @intFromPtr(cmdbuf),
         len,
@@ -86,7 +75,7 @@ fn gpu_submit_real(handle: i64, cmdbuf: [*]const u8, len: usize) i64 {
 fn gpu_wait_fence_real(fence: i64, timeout_ns: i64) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall2(
-            TRX_GPU_WAIT_FENCE,
+            syscall.nr.TRX_GPU_WAIT_FENCE,
             @bitCast(fence),
             @bitCast(timeout_ns),
         ),
@@ -170,12 +159,12 @@ pub export fn trx_gpu_wait_fence(fence: i64, timeout_ns: i64) c_int {
 const testing = if (is_test) @import("std").testing else undefined;
 
 test "GPU syscall numbers" {
-    try testing.expectEqual(@as(usize, 0x0170), TRX_GPU_OPEN);
-    try testing.expectEqual(@as(usize, 0x0171), TRX_GPU_CLOSE);
-    try testing.expectEqual(@as(usize, 0x0172), TRX_GPU_ALLOC_BO);
-    try testing.expectEqual(@as(usize, 0x0173), TRX_GPU_FREE_BO);
-    try testing.expectEqual(@as(usize, 0x0175), TRX_GPU_SUBMIT);
-    try testing.expectEqual(@as(usize, 0x0176), TRX_GPU_WAIT_FENCE);
+    try testing.expectEqual(@as(usize, 0x0170), syscall.nr.TRX_GPU_OPEN);
+    try testing.expectEqual(@as(usize, 0x0171), syscall.nr.TRX_GPU_CLOSE);
+    try testing.expectEqual(@as(usize, 0x0172), syscall.nr.TRX_GPU_ALLOC_BO);
+    try testing.expectEqual(@as(usize, 0x0173), syscall.nr.TRX_GPU_FREE_BO);
+    try testing.expectEqual(@as(usize, 0x0175), syscall.nr.TRX_GPU_SUBMIT);
+    try testing.expectEqual(@as(usize, 0x0176), syscall.nr.TRX_GPU_WAIT_FENCE);
 }
 
 test "trx_gpu_open/close stub" {
