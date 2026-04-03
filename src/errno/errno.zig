@@ -39,7 +39,7 @@ pub const ENOSYS: c_int = 38;
 pub const ETIMEDOUT: c_int = 110;
 
 /// Exported for C compatibility: programs calling __errno_location()
-export fn __errno_location() *c_int {
+pub export fn __errno_location() *c_int {
     return &errno;
 }
 

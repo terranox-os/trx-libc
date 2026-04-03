@@ -17,7 +17,7 @@ pub const O_APPEND: c_int = 0o2000;
 /// Exported as a 3-arg function (path, flags, mode). The C header declares
 /// open() as variadic — the ABI is compatible because extra args on the
 /// stack/registers are simply ignored by the kernel when O_CREAT is not set.
-export fn open(path: [*:0]const u8, flags: c_int, mode: c_uint) c_int {
+pub export fn open(path: [*:0]const u8, flags: c_int, mode: c_uint) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall3(
             syscall.nr.OPEN,

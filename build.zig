@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) void {
         });
         lib.root_module.red_zone = false;
         lib.root_module.stack_protector = false;
+        lib.root_module.stack_check = false;
         lib.addIncludePath(b.path("deps/kernel-libs/genesis-abi/include"));
         b.installArtifact(lib);
     }

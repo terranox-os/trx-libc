@@ -87,43 +87,43 @@ fn classify(c: c_int, flag: u8) c_int {
     return if (table[@intCast(@as(c_uint, @bitCast(c)))] & flag != 0) @as(c_int, 1) else @as(c_int, 0);
 }
 
-export fn isalpha(c: c_int) c_int {
+pub export fn isalpha(c: c_int) c_int {
     return classify(c, UPPER | LOWER);
 }
 
-export fn isupper(c: c_int) c_int {
+pub export fn isupper(c: c_int) c_int {
     return classify(c, UPPER);
 }
 
-export fn islower(c: c_int) c_int {
+pub export fn islower(c: c_int) c_int {
     return classify(c, LOWER);
 }
 
-export fn isdigit(c: c_int) c_int {
+pub export fn isdigit(c: c_int) c_int {
     return classify(c, DIGIT);
 }
 
-export fn isxdigit(c: c_int) c_int {
+pub export fn isxdigit(c: c_int) c_int {
     return classify(c, XDIGIT);
 }
 
-export fn isalnum(c: c_int) c_int {
+pub export fn isalnum(c: c_int) c_int {
     return classify(c, UPPER | LOWER | DIGIT);
 }
 
-export fn isspace(c: c_int) c_int {
+pub export fn isspace(c: c_int) c_int {
     return classify(c, SPACE);
 }
 
-export fn isprint(c: c_int) c_int {
+pub export fn isprint(c: c_int) c_int {
     return classify(c, PRINT);
 }
 
-export fn iscntrl(c: c_int) c_int {
+pub export fn iscntrl(c: c_int) c_int {
     return classify(c, CNTRL);
 }
 
-export fn ispunct(c: c_int) c_int {
+pub export fn ispunct(c: c_int) c_int {
     return classify(c, PUNCT);
 }
 
@@ -131,12 +131,12 @@ export fn ispunct(c: c_int) c_int {
 // Conversion functions
 // ---------------------------------------------------------------------------
 
-export fn toupper(c: c_int) c_int {
+pub export fn toupper(c: c_int) c_int {
     if (islower(c) != 0) return c - 32;
     return c;
 }
 
-export fn tolower(c: c_int) c_int {
+pub export fn tolower(c: c_int) c_int {
     if (isupper(c) != 0) return c + 32;
     return c;
 }

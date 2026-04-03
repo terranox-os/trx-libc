@@ -7,14 +7,24 @@
 
 const builtin = @import("builtin");
 const arch = builtin.cpu.arch;
+const is_test = builtin.is_test;
 
 const misc = @import("../misc/misc.zig");
+
+// CRT entry points are only exported in freestanding builds.
+// In test mode, the Zig test runner provides its own _start.
+comptime {
+    if (!is_test) {
+        @export(&__libc_start_main_impl, .{ .name = "__libc_start_main", .linkage = .strong });
+        @export(&_start_impl, .{ .name = "_start", .linkage = .strong });
+    }
+}
 
 /// External main function provided by the user program.
 extern fn main(argc: c_int, argv: [*]const [*:0]const u8) c_int;
 
 /// C runtime entry point. Called by _start after stack alignment.
-export fn __libc_start_main(stack_ptr: [*]const usize) noreturn {
+pub fn __libc_start_main_impl(stack_ptr: [*]const usize) callconv(.C) noreturn {
     // Stack layout (System V ABI):
     //   [rsp+0]  = argc
     //   [rsp+8]  = argv[0]
@@ -31,7 +41,7 @@ export fn __libc_start_main(stack_ptr: [*]const usize) noreturn {
 
 /// Process entry point (naked -- no prologue).
 /// Aligns the stack to 16 bytes and calls __libc_start_main.
-export fn _start() callconv(.Naked) noreturn {
+pub fn _start_impl() callconv(.Naked) noreturn {
     // Zero frame pointer (marks outermost frame for debuggers)
     // Pass stack pointer as argument to __libc_start_main
     // Align stack to 16 bytes (ABI requirement)
@@ -59,5 +69,4 @@ export fn _start() callconv(.Naked) noreturn {
         ),
         else => @compileError("unsupported architecture"),
     }
-    unreachable;
 }

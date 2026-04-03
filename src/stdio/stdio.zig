@@ -10,7 +10,10 @@
 const builtin = @import("builtin");
 const is_test = builtin.is_test;
 const std = @import("std");
-const VaList = std.builtin.VaList;
+
+/// VaList is only available on x86_64 in Zig 0.14 (aarch64 disabled due to miscompilations).
+const has_c_va_list = builtin.cpu.arch == .x86_64;
+const VaList = if (has_c_va_list) std.builtin.VaList else void;
 
 const syscall = @import("../internal/syscall.zig");
 const errno_mod = @import("../errno/errno.zig");
@@ -108,7 +111,7 @@ fn flush_impl(stream: *FILE) c_int {
     return 0;
 }
 
-export fn fflush(stream: ?*FILE) c_int {
+pub export fn fflush(stream: ?*FILE) c_int {
     if (stream) |s| {
         return flush_impl(s);
     }
@@ -151,7 +154,7 @@ fn fputc_impl(c: c_int, stream: *FILE) c_int {
     return @as(c_int, byte);
 }
 
-export fn fputc(c: c_int, stream: *FILE) c_int {
+pub export fn fputc(c: c_int, stream: *FILE) c_int {
     return fputc_impl(c, stream);
 }
 
@@ -181,7 +184,7 @@ fn fgetc_impl(stream: *FILE) c_int {
     return @as(c_int, stream.buf[0]);
 }
 
-export fn fgetc(stream: *FILE) c_int {
+pub export fn fgetc(stream: *FILE) c_int {
     return fgetc_impl(stream);
 }
 
@@ -189,7 +192,7 @@ export fn fgetc(stream: *FILE) c_int {
 // Core I/O: fwrite / fread
 // ---------------------------------------------------------------------------
 
-export fn fwrite(ptr: [*]const u8, size: usize, nmemb: usize, stream: *FILE) usize {
+pub export fn fwrite(ptr: [*]const u8, size: usize, nmemb: usize, stream: *FILE) usize {
     const total = size *| nmemb; // saturating multiply to avoid overflow
     if (total == 0) return 0;
 
@@ -206,7 +209,7 @@ export fn fwrite(ptr: [*]const u8, size: usize, nmemb: usize, stream: *FILE) usi
     return nmemb;
 }
 
-export fn fread(ptr: [*]u8, size: usize, nmemb: usize, stream: *FILE) usize {
+pub export fn fread(ptr: [*]u8, size: usize, nmemb: usize, stream: *FILE) usize {
     const total = size *| nmemb;
     if (total == 0) return 0;
 
@@ -228,7 +231,7 @@ export fn fread(ptr: [*]u8, size: usize, nmemb: usize, stream: *FILE) usize {
 // Core I/O: fputs / puts / putchar
 // ---------------------------------------------------------------------------
 
-export fn fputs(s: [*:0]const u8, stream: *FILE) c_int {
+pub export fn fputs(s: [*:0]const u8, stream: *FILE) c_int {
     var i: usize = 0;
     while (s[i] != 0) : (i += 1) {
         if (fputc_impl(@as(c_int, s[i]), stream) == EOF) return EOF;
@@ -236,13 +239,13 @@ export fn fputs(s: [*:0]const u8, stream: *FILE) c_int {
     return 0;
 }
 
-export fn puts(s: [*:0]const u8) c_int {
+pub export fn puts(s: [*:0]const u8) c_int {
     if (fputs(s, &stdout_file) == EOF) return EOF;
     if (fputc_impl('\n', &stdout_file) == EOF) return EOF;
     return 0;
 }
 
-export fn putchar(c: c_int) c_int {
+pub export fn putchar(c: c_int) c_int {
     return fputc_impl(c, &stdout_file);
 }
 
@@ -250,15 +253,15 @@ export fn putchar(c: c_int) c_int {
 // Error / EOF
 // ---------------------------------------------------------------------------
 
-export fn ferror(stream: *FILE) c_int {
+pub export fn ferror(stream: *FILE) c_int {
     return if (stream.error_flag) @as(c_int, 1) else @as(c_int, 0);
 }
 
-export fn feof(stream: *FILE) c_int {
+pub export fn feof(stream: *FILE) c_int {
     return if (stream.eof_flag) @as(c_int, 1) else @as(c_int, 0);
 }
 
-export fn clearerr(stream: *FILE) void {
+pub export fn clearerr(stream: *FILE) void {
     stream.error_flag = false;
     stream.eof_flag = false;
 }
@@ -355,7 +358,7 @@ const raw_open = if (is_test) raw_open_test else fcntl_mod.open;
 const raw_close = if (is_test) raw_close_test else unistd_mod.close;
 const raw_lseek = if (is_test) raw_lseek_test else unistd_mod.lseek;
 
-export fn fopen(path: [*:0]const u8, mode: [*:0]const u8) ?*FILE {
+pub export fn fopen(path: [*:0]const u8, mode: [*:0]const u8) ?*FILE {
     const parsed = parse_mode(mode) orelse return null;
 
     // Open the file via syscall
@@ -378,7 +381,7 @@ export fn fopen(path: [*:0]const u8, mode: [*:0]const u8) ?*FILE {
     return file;
 }
 
-export fn fclose(stream: *FILE) c_int {
+pub export fn fclose(stream: *FILE) c_int {
     // Flush any pending buffered data
     var result: c_int = 0;
     if (flush_impl(stream) != 0) {
@@ -396,7 +399,7 @@ export fn fclose(stream: *FILE) c_int {
     return result;
 }
 
-export fn fseek(stream: *FILE, offset: c_long, whence: c_int) c_int {
+pub export fn fseek(stream: *FILE, offset: c_long, whence: c_int) c_int {
     // Flush any pending writes before seeking
     if (stream.flags & F_WRITE != 0) {
         if (flush_impl(stream) != 0) return -1;
@@ -417,7 +420,7 @@ export fn fseek(stream: *FILE, offset: c_long, whence: c_int) c_int {
     return 0;
 }
 
-export fn ftell(stream: *FILE) c_long {
+pub export fn ftell(stream: *FILE) c_long {
     // Get current position from kernel
     const pos = raw_lseek(stream.fd, 0, SEEK_CUR);
     if (pos < 0) return -1;
@@ -657,17 +660,20 @@ fn vfprintf_impl(stream: *FILE, fmt: [*:0]const u8, ap: *VaList) c_int {
     return @intCast(count);
 }
 
-export fn vfprintf(stream: *FILE, fmt: [*:0]const u8, ap: *VaList) c_int {
+pub export fn vfprintf(stream: *FILE, fmt: [*:0]const u8, ap: *VaList) c_int {
+    if (comptime !has_c_va_list) return -1;
     return vfprintf_impl(stream, fmt, ap);
 }
 
-export fn fprintf(stream: *FILE, fmt: [*:0]const u8, ...) callconv(.c) c_int {
+pub export fn fprintf(stream: *FILE, fmt: [*:0]const u8, ...) callconv(.c) c_int {
+    if (comptime !has_c_va_list) return -1;
     var ap = @cVaStart();
     defer @cVaEnd(&ap);
     return vfprintf_impl(stream, fmt, &ap);
 }
 
-export fn printf(fmt: [*:0]const u8, ...) callconv(.c) c_int {
+pub export fn printf(fmt: [*:0]const u8, ...) callconv(.c) c_int {
+    if (comptime !has_c_va_list) return -1;
     var ap = @cVaStart();
     defer @cVaEnd(&ap);
     return vfprintf_impl(&stdout_file, fmt, &ap);
@@ -849,11 +855,13 @@ fn vsnprintf_impl(buf: [*]u8, size: usize, fmt: [*:0]const u8, ap: *VaList) c_in
     return @intCast(total);
 }
 
-export fn vsnprintf(buf: [*]u8, size: usize, fmt: [*:0]const u8, ap: *VaList) c_int {
+pub export fn vsnprintf(buf: [*]u8, size: usize, fmt: [*:0]const u8, ap: *VaList) c_int {
+    if (comptime !has_c_va_list) return -1;
     return vsnprintf_impl(buf, size, fmt, ap);
 }
 
-export fn snprintf(buf: [*]u8, size: usize, fmt: [*:0]const u8, ...) callconv(.c) c_int {
+pub export fn snprintf(buf: [*]u8, size: usize, fmt: [*:0]const u8, ...) callconv(.c) c_int {
+    if (comptime !has_c_va_list) return -1;
     var ap = @cVaStart();
     defer @cVaEnd(&ap);
     return vsnprintf_impl(buf, size, fmt, &ap);

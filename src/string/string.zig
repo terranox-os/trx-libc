@@ -15,14 +15,14 @@ const errno_mod = @import("../errno/errno.zig");
 // so we keep them as normal Zig functions and test through the wrappers.
 // ---------------------------------------------------------------------------
 
-fn memcpy_impl(dest: [*]u8, src: [*]const u8, n: usize) [*]u8 {
+fn memcpy_impl(dest: [*]u8, src: [*]const u8, n: usize) callconv(.C) [*]u8 {
     for (0..n) |i| {
         dest[i] = src[i];
     }
     return dest;
 }
 
-fn memmove_impl(dest: [*]u8, src: [*]const u8, n: usize) [*]u8 {
+fn memmove_impl(dest: [*]u8, src: [*]const u8, n: usize) callconv(.C) [*]u8 {
     if (n == 0) return dest;
 
     const d: usize = @intFromPtr(dest);
@@ -42,7 +42,7 @@ fn memmove_impl(dest: [*]u8, src: [*]const u8, n: usize) [*]u8 {
     return dest;
 }
 
-fn memset_impl(dest: [*]u8, c: c_int, n: usize) [*]u8 {
+fn memset_impl(dest: [*]u8, c: c_int, n: usize) callconv(.C) [*]u8 {
     const byte: u8 = @truncate(@as(c_uint, @bitCast(c)));
     for (0..n) |i| {
         dest[i] = byte;
@@ -50,7 +50,7 @@ fn memset_impl(dest: [*]u8, c: c_int, n: usize) [*]u8 {
     return dest;
 }
 
-fn memcmp_impl(s1: [*]const u8, s2: [*]const u8, n: usize) c_int {
+fn memcmp_impl(s1: [*]const u8, s2: [*]const u8, n: usize) callconv(.C) c_int {
     for (0..n) |i| {
         if (s1[i] != s2[i]) {
             return @as(c_int, s1[i]) - @as(c_int, s2[i]);
@@ -79,13 +79,13 @@ pub const memcmp = &memcmp_impl;
 // String operations
 // ---------------------------------------------------------------------------
 
-export fn strlen(s: [*:0]const u8) usize {
+pub export fn strlen(s: [*:0]const u8) usize {
     var len: usize = 0;
     while (s[len] != 0) : (len += 1) {}
     return len;
 }
 
-export fn strcpy(dest: [*]u8, src: [*:0]const u8) [*]u8 {
+pub export fn strcpy(dest: [*]u8, src: [*:0]const u8) [*]u8 {
     var i: usize = 0;
     while (src[i] != 0) : (i += 1) {
         dest[i] = src[i];
@@ -94,7 +94,7 @@ export fn strcpy(dest: [*]u8, src: [*:0]const u8) [*]u8 {
     return dest;
 }
 
-export fn strncpy(dest: [*]u8, src: [*:0]const u8, n: usize) [*]u8 {
+pub export fn strncpy(dest: [*]u8, src: [*:0]const u8, n: usize) [*]u8 {
     var i: usize = 0;
     while (i < n and src[i] != 0) : (i += 1) {
         dest[i] = src[i];
@@ -105,7 +105,7 @@ export fn strncpy(dest: [*]u8, src: [*:0]const u8, n: usize) [*]u8 {
     return dest;
 }
 
-export fn strcat(dest: [*]u8, src: [*:0]const u8) [*]u8 {
+pub export fn strcat(dest: [*]u8, src: [*:0]const u8) [*]u8 {
     var i: usize = 0;
     while (dest[i] != 0) : (i += 1) {}
 
@@ -117,7 +117,7 @@ export fn strcat(dest: [*]u8, src: [*:0]const u8) [*]u8 {
     return dest;
 }
 
-export fn strncat(dest: [*]u8, src: [*:0]const u8, n: usize) [*]u8 {
+pub export fn strncat(dest: [*]u8, src: [*:0]const u8, n: usize) [*]u8 {
     var i: usize = 0;
     while (dest[i] != 0) : (i += 1) {}
 
@@ -129,13 +129,13 @@ export fn strncat(dest: [*]u8, src: [*:0]const u8, n: usize) [*]u8 {
     return dest;
 }
 
-export fn strcmp(s1: [*:0]const u8, s2: [*:0]const u8) c_int {
+pub export fn strcmp(s1: [*:0]const u8, s2: [*:0]const u8) c_int {
     var i: usize = 0;
     while (s1[i] != 0 and s1[i] == s2[i]) : (i += 1) {}
     return @as(c_int, s1[i]) - @as(c_int, s2[i]);
 }
 
-export fn strncmp(s1: [*]const u8, s2: [*]const u8, n: usize) c_int {
+pub export fn strncmp(s1: [*]const u8, s2: [*]const u8, n: usize) c_int {
     for (0..n) |i| {
         if (s1[i] != s2[i] or s1[i] == 0) {
             return @as(c_int, s1[i]) - @as(c_int, s2[i]);
@@ -144,7 +144,7 @@ export fn strncmp(s1: [*]const u8, s2: [*]const u8, n: usize) c_int {
     return 0;
 }
 
-export fn strchr(s: [*:0]const u8, c: c_int) ?[*]const u8 {
+pub export fn strchr(s: [*:0]const u8, c: c_int) ?[*]const u8 {
     const byte: u8 = @truncate(@as(c_uint, @bitCast(c)));
     var i: usize = 0;
     while (true) {
@@ -154,7 +154,7 @@ export fn strchr(s: [*:0]const u8, c: c_int) ?[*]const u8 {
     }
 }
 
-export fn strrchr(s: [*:0]const u8, c: c_int) ?[*]const u8 {
+pub export fn strrchr(s: [*:0]const u8, c: c_int) ?[*]const u8 {
     const byte: u8 = @truncate(@as(c_uint, @bitCast(c)));
     var last: ?[*]const u8 = null;
     var i: usize = 0;
@@ -165,7 +165,7 @@ export fn strrchr(s: [*:0]const u8, c: c_int) ?[*]const u8 {
     }
 }
 
-export fn strstr(haystack: [*:0]const u8, needle: [*:0]const u8) ?[*]const u8 {
+pub export fn strstr(haystack: [*:0]const u8, needle: [*:0]const u8) ?[*]const u8 {
     if (needle[0] == 0) return haystack;
 
     const needle_len = strlen(needle);
@@ -182,7 +182,7 @@ export fn strstr(haystack: [*:0]const u8, needle: [*:0]const u8) ?[*]const u8 {
     return null;
 }
 
-export fn strerror(errnum: c_int) [*:0]const u8 {
+pub export fn strerror(errnum: c_int) [*:0]const u8 {
     return switch (errnum) {
         0 => "Success",
         errno_mod.EPERM => "Operation not permitted",

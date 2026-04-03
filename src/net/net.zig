@@ -49,19 +49,19 @@ pub const sockaddr_in = extern struct {
 // Byte-order helpers (x86_64 is little-endian)
 // ---------------------------------------------------------------------------
 
-export fn htons(x: u16) u16 {
+pub export fn htons(x: u16) u16 {
     return @byteSwap(x);
 }
 
-export fn htonl(x: u32) u32 {
+pub export fn htonl(x: u32) u32 {
     return @byteSwap(x);
 }
 
-export fn ntohs(x: u16) u16 {
+pub export fn ntohs(x: u16) u16 {
     return @byteSwap(x);
 }
 
-export fn ntohl(x: u32) u32 {
+pub export fn ntohl(x: u32) u32 {
     return @byteSwap(x);
 }
 
@@ -71,7 +71,7 @@ export fn ntohl(x: u32) u32 {
 
 /// Parse a dotted-decimal IPv4 string into a network-order 32-bit address.
 /// Returns 1 on success, 0 on parse failure. Only AF_INET is supported.
-export fn inet_pton(af: c_int, src: [*:0]const u8, dst: *anyopaque) c_int {
+pub export fn inet_pton(af: c_int, src: [*:0]const u8, dst: *anyopaque) c_int {
     if (af != AF_INET) {
         // AF_INET6 not yet supported
         errno_mod.errno = errno_mod.ENOSYS;
@@ -119,7 +119,7 @@ export fn inet_pton(af: c_int, src: [*:0]const u8, dst: *anyopaque) c_int {
 
 /// Format a network-order IPv4 address into a dotted-decimal string.
 /// Returns pointer to dst on success, null on failure.
-export fn inet_ntop(af: c_int, src: *const anyopaque, dst: [*]u8, size: u32) ?[*:0]const u8 {
+pub export fn inet_ntop(af: c_int, src: *const anyopaque, dst: [*]u8, size: u32) ?[*:0]const u8 {
     if (af != AF_INET) {
         errno_mod.errno = errno_mod.ENOSYS;
         return null;
@@ -295,32 +295,32 @@ const recvmsg_impl = if (is_test) recvmsg_test else recvmsg_real;
 // ---------------------------------------------------------------------------
 
 /// Create a socket.
-export fn socket(domain: c_int, sock_type: c_int, protocol: c_int) c_int {
+pub export fn socket(domain: c_int, sock_type: c_int, protocol: c_int) c_int {
     return socket_impl(domain, sock_type, protocol);
 }
 
 /// Bind a socket to an address.
-export fn bind(fd: c_int, addr: *const anyopaque, addrlen: u32) c_int {
+pub export fn bind(fd: c_int, addr: *const anyopaque, addrlen: u32) c_int {
     return bind_impl(fd, addr, addrlen);
 }
 
 /// Listen for connections on a socket.
-export fn listen(fd: c_int, backlog: c_int) c_int {
+pub export fn listen(fd: c_int, backlog: c_int) c_int {
     return listen_impl(fd, backlog);
 }
 
 /// Accept a connection on a socket.
-export fn accept(fd: c_int, addr: ?*anyopaque, addrlen: ?*u32) c_int {
+pub export fn accept(fd: c_int, addr: ?*anyopaque, addrlen: ?*u32) c_int {
     return accept_impl(fd, addr, addrlen);
 }
 
 /// Connect a socket to an address.
-export fn connect(fd: c_int, addr: *const anyopaque, addrlen: u32) c_int {
+pub export fn connect(fd: c_int, addr: *const anyopaque, addrlen: u32) c_int {
     return connect_impl(fd, addr, addrlen);
 }
 
 /// Send a message on a socket (wrapper around sendmsg).
-export fn send(fd: c_int, buf: [*]const u8, len: usize, flags: c_int) isize {
+pub export fn send(fd: c_int, buf: [*]const u8, len: usize, flags: c_int) isize {
     // In a full implementation, this would construct a msghdr and call sendmsg.
     // For now, forward directly to sendmsg_impl with a minimal msghdr-like approach.
     _ = buf;
@@ -329,7 +329,7 @@ export fn send(fd: c_int, buf: [*]const u8, len: usize, flags: c_int) isize {
 }
 
 /// Receive a message from a socket (wrapper around recvmsg).
-export fn recv(fd: c_int, buf: [*]u8, len: usize, flags: c_int) isize {
+pub export fn recv(fd: c_int, buf: [*]u8, len: usize, flags: c_int) isize {
     // In a full implementation, this would construct a msghdr and call recvmsg.
     _ = buf;
     _ = len;
@@ -338,18 +338,18 @@ export fn recv(fd: c_int, buf: [*]u8, len: usize, flags: c_int) isize {
 }
 
 /// Send a message on a socket.
-export fn sendmsg(fd: c_int, msg: *const anyopaque, flags: c_int) isize {
+pub export fn sendmsg(fd: c_int, msg: *const anyopaque, flags: c_int) isize {
     return sendmsg_impl(fd, msg, flags);
 }
 
 /// Receive a message from a socket.
-export fn recvmsg(fd: c_int, msg: *anyopaque, flags: c_int) isize {
+pub export fn recvmsg(fd: c_int, msg: *anyopaque, flags: c_int) isize {
     return recvmsg_impl(fd, msg, flags);
 }
 
 /// Set socket options.
 /// TODO: No dedicated TRX syscall yet; stub with -ENOSYS.
-export fn setsockopt(fd: c_int, level: c_int, optname: c_int, optval: *const anyopaque, optlen: u32) c_int {
+pub export fn setsockopt(fd: c_int, level: c_int, optname: c_int, optval: *const anyopaque, optlen: u32) c_int {
     _ = fd;
     _ = level;
     _ = optname;
@@ -361,7 +361,7 @@ export fn setsockopt(fd: c_int, level: c_int, optname: c_int, optval: *const any
 
 /// Get socket options.
 /// TODO: No dedicated TRX syscall yet; stub with -ENOSYS.
-export fn getsockopt(fd: c_int, level: c_int, optname: c_int, optval: *anyopaque, optlen: *u32) c_int {
+pub export fn getsockopt(fd: c_int, level: c_int, optname: c_int, optval: *anyopaque, optlen: *u32) c_int {
     _ = fd;
     _ = level;
     _ = optname;
@@ -373,7 +373,7 @@ export fn getsockopt(fd: c_int, level: c_int, optname: c_int, optval: *anyopaque
 
 /// Shut down part of a full-duplex connection.
 /// TODO: No dedicated TRX syscall yet; stub with -ENOSYS.
-export fn shutdown(fd: c_int, how: c_int) c_int {
+pub export fn shutdown(fd: c_int, how: c_int) c_int {
     _ = fd;
     _ = how;
     errno_mod.errno = errno_mod.ENOSYS;
@@ -386,7 +386,7 @@ export fn shutdown(fd: c_int, how: c_int) c_int {
 
 /// Stub getaddrinfo -- only numeric addresses would be supported in future.
 /// TODO: Full DNS resolution is far future.
-export fn getaddrinfo(node: ?[*:0]const u8, service: ?[*:0]const u8, hints: ?*const anyopaque, res: **anyopaque) c_int {
+pub export fn getaddrinfo(node: ?[*:0]const u8, service: ?[*:0]const u8, hints: ?*const anyopaque, res: **anyopaque) c_int {
     _ = node;
     _ = service;
     _ = hints;
@@ -397,7 +397,7 @@ export fn getaddrinfo(node: ?[*:0]const u8, service: ?[*:0]const u8, hints: ?*co
 }
 
 /// Stub freeaddrinfo.
-export fn freeaddrinfo(res: *anyopaque) void {
+pub export fn freeaddrinfo(res: *anyopaque) void {
     _ = res;
     // Nothing to free -- getaddrinfo never allocates.
 }

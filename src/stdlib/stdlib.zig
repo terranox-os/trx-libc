@@ -7,7 +7,7 @@
 // atoi / abs / labs
 // ---------------------------------------------------------------------------
 
-export fn atoi(s: [*:0]const u8) c_int {
+pub export fn atoi(s: [*:0]const u8) c_int {
     var i: usize = 0;
 
     // Skip leading whitespace
@@ -33,11 +33,11 @@ export fn atoi(s: [*:0]const u8) c_int {
     return if (negative) -%result else result;
 }
 
-export fn abs(x: c_int) c_int {
+pub export fn abs(x: c_int) c_int {
     return if (x < 0) -%x else x;
 }
 
-export fn labs(x: c_long) c_long {
+pub export fn labs(x: c_long) c_long {
     return if (x < 0) -%x else x;
 }
 
@@ -49,11 +49,11 @@ const RAND_MAX: c_int = 0x7FFFFFFF; // 2^31 - 1
 
 var prng_state: u64 = 1;
 
-export fn srand(seed: c_uint) void {
+pub export fn srand(seed: c_uint) void {
     prng_state = if (seed == 0) 1 else @as(u64, seed);
 }
 
-export fn rand() c_int {
+pub export fn rand() c_int {
     var s = prng_state;
     s ^= s << 13;
     s ^= s >> 7;
@@ -66,7 +66,7 @@ export fn rand() c_int {
 // bsearch
 // ---------------------------------------------------------------------------
 
-export fn bsearch(
+pub export fn bsearch(
     key: *const anyopaque,
     base: *const anyopaque,
     nmemb: usize,
@@ -96,7 +96,7 @@ export fn bsearch(
 // qsort -- insertion sort (simple, correct)
 // ---------------------------------------------------------------------------
 
-export fn qsort(
+pub export fn qsort(
     base: *anyopaque,
     nmemb: usize,
     size: usize,

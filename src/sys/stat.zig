@@ -51,7 +51,7 @@ pub const S_IFLNK: c_uint = 0o120000;
 pub const S_IFSOCK: c_uint = 0o140000;
 
 /// Get file status by path.
-export fn stat(path: [*:0]const u8, buf: *Stat) c_int {
+pub export fn stat(path: [*:0]const u8, buf: *Stat) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall2(syscall.nr.STAT, @intFromPtr(path), @intFromPtr(buf)),
     );
@@ -59,7 +59,7 @@ export fn stat(path: [*:0]const u8, buf: *Stat) c_int {
 }
 
 /// Get file status by file descriptor.
-export fn fstat(fd: c_int, buf: *Stat) c_int {
+pub export fn fstat(fd: c_int, buf: *Stat) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall2(syscall.nr.FSTAT, @intCast(fd), @intFromPtr(buf)),
     );
@@ -67,7 +67,7 @@ export fn fstat(fd: c_int, buf: *Stat) c_int {
 }
 
 /// Create a directory.
-export fn mkdir(path: [*:0]const u8, mode: c_uint) c_int {
+pub export fn mkdir(path: [*:0]const u8, mode: c_uint) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall2(syscall.nr.TRX_FS_MKDIR, @intFromPtr(path), @as(usize, mode)),
     );
