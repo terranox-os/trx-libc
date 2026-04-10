@@ -11,16 +11,19 @@ pub fn build(b: *std.Build) void {
 
     for (targets) |t| {
         const resolved = b.resolveTargetQuery(t);
-        const lib = b.addStaticLibrary(.{
-            .name = b.fmt("c-{s}", .{@tagName(t.cpu_arch.?)}),
+        const mod = b.createModule(.{
             .root_source_file = b.path("src/libc.zig"),
             .target = resolved,
             .optimize = optimize,
+            .red_zone = false,
+            .stack_protector = false,
+            .stack_check = false,
         });
-        lib.root_module.red_zone = false;
-        lib.root_module.stack_protector = false;
-        lib.root_module.stack_check = false;
-        lib.addIncludePath(b.path("deps/kernel-libs/genesis-abi/include"));
+        mod.addIncludePath(b.path("deps/kernel-libs/genesis-abi/include"));
+        const lib = b.addLibrary(.{
+            .name = b.fmt("c-{s}", .{@tagName(t.cpu_arch.?)}),
+            .root_module = mod,
+        });
         b.installArtifact(lib);
     }
 
@@ -34,10 +37,14 @@ pub fn build(b: *std.Build) void {
 
     // Host-native tests (always native arch)
     const test_step = b.step("test", "Run unit tests");
-    const tests = b.addTest(.{
+    const test_mod = b.createModule(.{
         .root_source_file = b.path("src/libc.zig"),
+        .target = b.graph.host,
     });
-    tests.addIncludePath(b.path("deps/kernel-libs/genesis-abi/include"));
+    test_mod.addIncludePath(b.path("deps/kernel-libs/genesis-abi/include"));
+    const tests = b.addTest(.{
+        .root_module = test_mod,
+    });
     const run_tests = b.addRunArtifact(tests);
     test_step.dependOn(&run_tests.step);
 }

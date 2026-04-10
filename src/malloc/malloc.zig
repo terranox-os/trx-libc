@@ -80,7 +80,7 @@ fn spinLoopHint() void {
         @import("std").atomic.spinLoopHint();
     } else {
         // Freestanding: inline asm pause.
-        asm volatile ("pause" ::: "memory");
+        asm volatile ("pause" ::: .{ .memory = true });
     }
 }
 
@@ -443,7 +443,7 @@ fn min(a: usize, b: usize) usize {
 // Public API (C ABI exports)
 // ---------------------------------------------------------------------------
 
-fn mallocImpl(size: usize) callconv(.C) ?*anyopaque {
+fn mallocImpl(size: usize) callconv(.c) ?*anyopaque {
     if (size == 0) return null;
 
     // Compute total chunk size needed.
@@ -468,7 +468,7 @@ fn mallocImpl(size: usize) callconv(.C) ?*anyopaque {
     return null;
 }
 
-fn freeImpl(ptr: ?*anyopaque) callconv(.C) void {
+fn freeImpl(ptr: ?*anyopaque) callconv(.c) void {
     if (ptr == null) return;
 
     const header_addr = userToChunk(ptr.?);
@@ -492,7 +492,7 @@ fn freeImpl(ptr: ?*anyopaque) callconv(.C) void {
     }
 }
 
-fn callocImpl(nmemb: usize, size: usize) callconv(.C) ?*anyopaque {
+fn callocImpl(nmemb: usize, size: usize) callconv(.c) ?*anyopaque {
     if (nmemb == 0 or size == 0) return null;
 
     // Overflow check.
@@ -510,7 +510,7 @@ fn callocImpl(nmemb: usize, size: usize) callconv(.C) ?*anyopaque {
     return p;
 }
 
-fn reallocImpl(ptr: ?*anyopaque, size: usize) callconv(.C) ?*anyopaque {
+fn reallocImpl(ptr: ?*anyopaque, size: usize) callconv(.c) ?*anyopaque {
     if (ptr == null) return mallocImpl(size);
 
     if (size == 0) {

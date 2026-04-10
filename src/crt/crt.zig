@@ -24,7 +24,7 @@ comptime {
 extern fn main(argc: c_int, argv: [*]const [*:0]const u8) c_int;
 
 /// C runtime entry point. Called by _start after stack alignment.
-pub fn __libc_start_main_impl(stack_ptr: [*]const usize) callconv(.C) noreturn {
+pub fn __libc_start_main_impl(stack_ptr: [*]const usize) callconv(.c) noreturn {
     // Stack layout (System V ABI):
     //   [rsp+0]  = argc
     //   [rsp+8]  = argv[0]
@@ -41,32 +41,33 @@ pub fn __libc_start_main_impl(stack_ptr: [*]const usize) callconv(.C) noreturn {
 
 /// Process entry point (naked -- no prologue).
 /// Aligns the stack to 16 bytes and calls __libc_start_main.
-pub fn _start_impl() callconv(.Naked) noreturn {
+pub fn _start_impl() callconv(.naked) noreturn {
     // Zero frame pointer (marks outermost frame for debuggers)
     // Pass stack pointer as argument to __libc_start_main
     // Align stack to 16 bytes (ABI requirement)
-    switch (arch) {
-        .x86_64 => asm volatile (
+    asm volatile (switch (arch) {
+        .x86_64 =>
             \\xorl %%ebp, %%ebp
             \\movq %%rsp, %%rdi
             \\andq $-16, %%rsp
-            \\call __libc_start_main
+            \\callq %[__libc_start_main:P]
             \\ud2
-        ),
-        .aarch64 => asm volatile (
+            ,
+        .aarch64 =>
             \\mov x29, #0
             \\mov x0, sp
             \\and sp, x0, #-16
-            \\bl __libc_start_main
-            \\brk #0
-        ),
-        .riscv64 => asm volatile (
+            \\b %[__libc_start_main]
+            ,
+        .riscv64 =>
             \\li fp, 0
             \\mv a0, sp
             \\andi sp, sp, -16
-            \\call __libc_start_main
-            \\ebreak
-        ),
+            \\tail %[__libc_start_main]
+            ,
         else => @compileError("unsupported architecture"),
     }
+        :
+        : [__libc_start_main] "X" (&__libc_start_main_impl),
+    );
 }

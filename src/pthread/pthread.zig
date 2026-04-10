@@ -20,7 +20,6 @@ const syscall = @import("../internal/syscall.zig");
 const errno_mod = @import("../errno/errno.zig");
 const malloc_mod = @import("../malloc/malloc.zig");
 
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -83,7 +82,7 @@ fn spinLoopHint() void {
     if (is_test) {
         @import("std").atomic.spinLoopHint();
     } else {
-        asm volatile ("pause" ::: "memory");
+        asm volatile ("pause" ::: .{ .memory = true });
     }
 }
 
@@ -200,7 +199,7 @@ pub export fn pthread_cond_destroy(cond: *pthread_cond_t) c_int {
 // Thread create / join / exit / self / yield
 // ---------------------------------------------------------------------------
 
-fn thread_create_real(thread: *pthread_t, attr: ?*const pthread_attr_t, start_routine: *const fn (?*anyopaque) callconv(.C) ?*anyopaque, arg: ?*anyopaque) c_int {
+fn thread_create_real(thread: *pthread_t, attr: ?*const pthread_attr_t, start_routine: *const fn (?*anyopaque) callconv(.c) ?*anyopaque, arg: ?*anyopaque) c_int {
     const stack_sz = if (attr) |a| a.stack_size else 2 * 1024 * 1024;
 
     // Allocate stack via mmap (anonymous, read-write)
@@ -278,7 +277,7 @@ fn thread_yield_real() c_int {
 }
 
 // Test stubs
-fn thread_create_test(thread: *pthread_t, _: ?*const pthread_attr_t, _: *const fn (?*anyopaque) callconv(.C) ?*anyopaque, _: ?*anyopaque) c_int {
+fn thread_create_test(thread: *pthread_t, _: ?*const pthread_attr_t, _: *const fn (?*anyopaque) callconv(.c) ?*anyopaque, _: ?*anyopaque) c_int {
     thread.* = 42; // fake thread ID
     return 0;
 }
@@ -306,7 +305,7 @@ const thread_exit_impl = if (is_test) thread_exit_test else thread_exit_real;
 const thread_self_impl = if (is_test) thread_self_test else thread_self_real;
 const thread_yield_impl = if (is_test) thread_yield_test else thread_yield_real;
 
-pub export fn pthread_create(thread: *pthread_t, attr: ?*const pthread_attr_t, start_routine: *const fn (?*anyopaque) callconv(.C) ?*anyopaque, arg: ?*anyopaque) c_int {
+pub export fn pthread_create(thread: *pthread_t, attr: ?*const pthread_attr_t, start_routine: *const fn (?*anyopaque) callconv(.c) ?*anyopaque, arg: ?*anyopaque) c_int {
     return thread_create_impl(thread, attr, start_routine, arg);
 }
 
@@ -336,13 +335,13 @@ pub export fn pthread_yield() c_int {
 const KeySlot = struct {
     in_use: bool = false,
     value: ?*anyopaque = null,
-    destructor: ?*const fn (?*anyopaque) callconv(.C) void = null,
+    destructor: ?*const fn (?*anyopaque) callconv(.c) void = null,
 };
 
 var tsd_slots: [PTHREAD_KEYS_MAX]KeySlot = [_]KeySlot{.{}} ** PTHREAD_KEYS_MAX;
 var tsd_next_key: u32 = 0;
 
-pub export fn pthread_key_create(key: *pthread_key_t, destructor: ?*const fn (?*anyopaque) callconv(.C) void) c_int {
+pub export fn pthread_key_create(key: *pthread_key_t, destructor: ?*const fn (?*anyopaque) callconv(.c) void) c_int {
     // Find a free slot
     var i: u32 = 0;
     while (i < PTHREAD_KEYS_MAX) : (i += 1) {
@@ -388,7 +387,7 @@ pub export fn pthread_getspecific(key: pthread_key_t) ?*anyopaque {
 // Once
 // ---------------------------------------------------------------------------
 
-pub export fn pthread_once(once: *pthread_once_t, init_routine: *const fn () callconv(.C) void) c_int {
+pub export fn pthread_once(once: *pthread_once_t, init_routine: *const fn () callconv(.c) void) c_int {
     // Fast path: already complete
     if (@atomicLoad(u32, once, .acquire) == ONCE_COMPLETE) {
         return 0;
@@ -566,7 +565,7 @@ test "once runs routine exactly once" {
     // We need a C-calling-convention function for the callback
     const Ctx = struct {
         var count: *u32 = undefined;
-        fn init() callconv(.C) void {
+        fn init() callconv(.c) void {
             count.* += 1;
         }
     };
@@ -667,7 +666,7 @@ test "key create exhaustion" {
 test "pthread_create test stub" {
     var tid: pthread_t = 0;
     const Dummy = struct {
-        fn routine(_: ?*anyopaque) callconv(.C) ?*anyopaque {
+        fn routine(_: ?*anyopaque) callconv(.c) ?*anyopaque {
             return null;
         }
     };

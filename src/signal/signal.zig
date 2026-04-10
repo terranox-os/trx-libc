@@ -37,7 +37,7 @@ pub const _NSIG: c_int = 32;
 // Types
 // ---------------------------------------------------------------------------
 
-pub const sighandler_t = ?*const fn (c_int) callconv(.C) void;
+pub const sighandler_t = ?*const fn (c_int) callconv(.c) void;
 pub const SIG_DFL: sighandler_t = null;
 pub const SIG_IGN: sighandler_t = @ptrFromInt(1);
 
@@ -130,7 +130,7 @@ pub export fn kill(pid: c_int, sig: c_int) c_int {
 /// Send a signal to the calling process.
 pub export fn raise(sig: c_int) c_int {
     // Import getpid from unistd
-    const getpid_fn = @extern(*const fn () callconv(.C) c_int, .{ .name = "getpid" });
+    const getpid_fn = @extern(*const fn () callconv(.c) c_int, .{ .name = "getpid" });
     if (is_test) {
         // In test mode, use a fixed pid
         return kill_impl(42, sig);
@@ -352,6 +352,6 @@ test "sigaction_t struct size" {
 }
 
 test "SIG_DFL is null, SIG_IGN is 1" {
-    try testing.expectEqual(@as(?*const fn (c_int) callconv(.C) void, null), SIG_DFL);
+    try testing.expectEqual(@as(?*const fn (c_int) callconv(.c) void, null), SIG_DFL);
     try testing.expectEqual(@as(usize, 1), @intFromPtr(SIG_IGN.?));
 }

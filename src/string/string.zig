@@ -15,14 +15,14 @@ const errno_mod = @import("../errno/errno.zig");
 // so we keep them as normal Zig functions and test through the wrappers.
 // ---------------------------------------------------------------------------
 
-fn memcpy_impl(dest: [*]u8, src: [*]const u8, n: usize) callconv(.C) [*]u8 {
+fn memcpy_impl(dest: [*]u8, src: [*]const u8, n: usize) callconv(.c) [*]u8 {
     for (0..n) |i| {
         dest[i] = src[i];
     }
     return dest;
 }
 
-fn memmove_impl(dest: [*]u8, src: [*]const u8, n: usize) callconv(.C) [*]u8 {
+fn memmove_impl(dest: [*]u8, src: [*]const u8, n: usize) callconv(.c) [*]u8 {
     if (n == 0) return dest;
 
     const d: usize = @intFromPtr(dest);
@@ -42,7 +42,7 @@ fn memmove_impl(dest: [*]u8, src: [*]const u8, n: usize) callconv(.C) [*]u8 {
     return dest;
 }
 
-fn memset_impl(dest: [*]u8, c: c_int, n: usize) callconv(.C) [*]u8 {
+fn memset_impl(dest: [*]u8, c: c_int, n: usize) callconv(.c) [*]u8 {
     const byte: u8 = @truncate(@as(c_uint, @bitCast(c)));
     for (0..n) |i| {
         dest[i] = byte;
@@ -50,7 +50,7 @@ fn memset_impl(dest: [*]u8, c: c_int, n: usize) callconv(.C) [*]u8 {
     return dest;
 }
 
-fn memcmp_impl(s1: [*]const u8, s2: [*]const u8, n: usize) callconv(.C) c_int {
+fn memcmp_impl(s1: [*]const u8, s2: [*]const u8, n: usize) callconv(.c) c_int {
     for (0..n) |i| {
         if (s1[i] != s2[i]) {
             return @as(c_int, s1[i]) - @as(c_int, s2[i]);
