@@ -71,7 +71,7 @@ pub export fn bsearch(
     base: *const anyopaque,
     nmemb: usize,
     size: usize,
-    compar: *const fn (*const anyopaque, *const anyopaque) callconv(.C) c_int,
+    compar: *const fn (*const anyopaque, *const anyopaque) callconv(.c) c_int,
 ) ?*const anyopaque {
     const base_addr: usize = @intFromPtr(base);
     var lo: usize = 0;
@@ -100,7 +100,7 @@ pub export fn qsort(
     base: *anyopaque,
     nmemb: usize,
     size: usize,
-    compar: *const fn (*const anyopaque, *const anyopaque) callconv(.C) c_int,
+    compar: *const fn (*const anyopaque, *const anyopaque) callconv(.c) c_int,
 ) void {
     if (nmemb <= 1 or size == 0) return;
 
@@ -203,7 +203,7 @@ test "rand range" {
     }
 }
 
-fn intCompareFn(a_ptr: *const anyopaque, b_ptr: *const anyopaque) callconv(.C) c_int {
+fn intCompareFn(a_ptr: *const anyopaque, b_ptr: *const anyopaque) callconv(.c) c_int {
     const a: *const c_int = @ptrCast(@alignCast(a_ptr));
     const b: *const c_int = @ptrCast(@alignCast(b_ptr));
     if (a.* < b.*) return -1;

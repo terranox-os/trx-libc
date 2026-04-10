@@ -488,7 +488,7 @@ fn render_unsigned(value: u64, base: u8, uppercase: bool, buf: *[20]u8) usize {
 }
 
 /// Core vfprintf engine: format string with va_list.
-fn vfprintf_impl(stream: *FILE, fmt: [*:0]const u8, ap: *VaList) c_int {
+fn vfprintf_impl(stream: *FILE, fmt: [*:0]const u8, ap: *VaList) callconv(.c) c_int {
     var count: usize = 0;
     var i: usize = 0;
 
@@ -680,7 +680,7 @@ pub export fn printf(fmt: [*:0]const u8, ...) callconv(.c) c_int {
 }
 
 /// vsnprintf engine: formats into a fixed buffer.
-fn vsnprintf_impl(buf: [*]u8, size: usize, fmt: [*:0]const u8, ap: *VaList) c_int {
+fn vsnprintf_impl(buf: [*]u8, size: usize, fmt: [*:0]const u8, ap: *VaList) callconv(.c) c_int {
     // We build a "fake" FILE that writes into the user buffer.
     // To keep it simple and avoid modifying FILE, we do character-by-character
     // formatting with a closure-like approach using a position counter.
