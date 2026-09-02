@@ -2,6 +2,15 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
+    const kernel_libs_include = b.option(
+        []const u8,
+        "kernel-libs",
+        "Path to the kernel-libs genesis-abi/include directory",
+    ) orelse "deps/kernel-libs/genesis-abi/include";
+    const kernel_libs_path: std.Build.LazyPath = if (std.fs.path.isAbsolute(kernel_libs_include))
+        .{ .cwd_relative = kernel_libs_include }
+    else
+        b.path(kernel_libs_include);
 
     const targets = [_]std.Target.Query{
         .{ .cpu_arch = .x86_64, .os_tag = .freestanding, .abi = .none },
@@ -19,7 +28,7 @@ pub fn build(b: *std.Build) void {
             .stack_protector = false,
             .stack_check = false,
         });
-        mod.addIncludePath(b.path("deps/kernel-libs/genesis-abi/include"));
+        mod.addIncludePath(kernel_libs_path);
         const lib = b.addLibrary(.{
             .name = b.fmt("c-{s}", .{@tagName(t.cpu_arch.?)}),
             .root_module = mod,
@@ -41,7 +50,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/libc.zig"),
         .target = b.graph.host,
     });
-    test_mod.addIncludePath(b.path("deps/kernel-libs/genesis-abi/include"));
+    test_mod.addIncludePath(kernel_libs_path);
     const tests = b.addTest(.{
         .root_module = test_mod,
     });
