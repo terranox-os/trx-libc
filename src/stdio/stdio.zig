@@ -72,7 +72,7 @@ fn raw_write_test(_: c_int, _: [*]const u8, count: usize) isize {
 
 fn raw_write_real(fd: c_int, buf: [*]const u8, count: usize) isize {
     return errno_mod.syscall_ret(
-        syscall.syscall3(syscall.nr.WRITE, @intCast(fd), @intFromPtr(buf), count),
+        syscall.syscall3(syscall.linux.WRITE, @intCast(fd), @intFromPtr(buf), count),
     );
 }
 
@@ -84,7 +84,7 @@ fn raw_read_test(_: c_int, _: [*]u8, _: usize) isize {
 
 fn raw_read_real(fd: c_int, buf: [*]u8, count: usize) isize {
     return errno_mod.syscall_ret(
-        syscall.syscall3(syscall.nr.READ, @intCast(fd), @intFromPtr(buf), count),
+        syscall.syscall3(syscall.linux.READ, @intCast(fd), @intFromPtr(buf), count),
     );
 }
 

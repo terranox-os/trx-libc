@@ -7,20 +7,22 @@ const errno_mod = @import("../errno/errno.zig");
 pub const Stat = extern struct {
     dev: u64,
     ino: u64,
+    nlink: u64,
     mode: u32,
-    nlink: u32,
     uid: u32,
     gid: u32,
+    pad0: u32,
     rdev: u64,
     size: i64,
     blksize: i64,
     blocks: i64,
-    atime_sec: i64,
-    atime_nsec: i64,
-    mtime_sec: i64,
-    mtime_nsec: i64,
-    ctime_sec: i64,
-    ctime_nsec: i64,
+    atime_sec: u64,
+    atime_nsec: u64,
+    mtime_sec: u64,
+    mtime_nsec: u64,
+    ctime_sec: u64,
+    ctime_nsec: u64,
+    unused: [3]i64,
 };
 
 // S_* file mode constants
@@ -53,7 +55,7 @@ pub const S_IFSOCK: c_uint = 0o140000;
 /// Get file status by path.
 pub export fn stat(path: [*:0]const u8, buf: *Stat) c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall2(syscall.nr.STAT, @intFromPtr(path), @intFromPtr(buf)),
+        syscall.syscall2(syscall.linux.STAT, @intFromPtr(path), @intFromPtr(buf)),
     );
     return @intCast(ret);
 }
@@ -61,7 +63,7 @@ pub export fn stat(path: [*:0]const u8, buf: *Stat) c_int {
 /// Get file status by file descriptor.
 pub export fn fstat(fd: c_int, buf: *Stat) c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall2(syscall.nr.FSTAT, @intCast(fd), @intFromPtr(buf)),
+        syscall.syscall2(syscall.linux.FSTAT, @intCast(fd), @intFromPtr(buf)),
     );
     return @intCast(ret);
 }

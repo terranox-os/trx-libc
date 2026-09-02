@@ -17,22 +17,24 @@ typedef long           blkcnt_t;
 typedef long           time_t;
 
 struct stat {
-    dev_t     st_dev;
-    ino_t     st_ino;
-    mode_t    st_mode;
-    nlink_t   st_nlink;
-    uid_t     st_uid;
-    gid_t     st_gid;
-    dev_t     st_rdev;
-    off_t     st_size;
-    blksize_t st_blksize;
-    blkcnt_t  st_blocks;
-    time_t    st_atime;
-    long      st_atime_nsec;
-    time_t    st_mtime;
-    long      st_mtime_nsec;
-    time_t    st_ctime;
-    long      st_ctime_nsec;
+    unsigned long st_dev;
+    unsigned long st_ino;
+    unsigned long st_nlink;
+    unsigned int  st_mode;
+    unsigned int  st_uid;
+    unsigned int  st_gid;
+    unsigned int  __pad0;
+    unsigned long st_rdev;
+    long          st_size;
+    long          st_blksize;
+    long          st_blocks;
+    unsigned long st_atime_sec;
+    unsigned long st_atime_nsec;
+    unsigned long st_mtime_sec;
+    unsigned long st_mtime_nsec;
+    unsigned long st_ctime_sec;
+    unsigned long st_ctime_nsec;
+    long          __unused[3];
 };
 
 /* File type bits */

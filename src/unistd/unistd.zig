@@ -6,21 +6,21 @@ const errno_mod = @import("../errno/errno.zig");
 /// Write bytes to a file descriptor.
 pub export fn write(fd: c_int, buf: [*]const u8, count: usize) isize {
     return errno_mod.syscall_ret(
-        syscall.syscall3(syscall.nr.WRITE, @intCast(fd), @intFromPtr(buf), count),
+        syscall.syscall3(syscall.linux.WRITE, @intCast(fd), @intFromPtr(buf), count),
     );
 }
 
 /// Read bytes from a file descriptor.
 pub export fn read(fd: c_int, buf: [*]u8, count: usize) isize {
     return errno_mod.syscall_ret(
-        syscall.syscall3(syscall.nr.READ, @intCast(fd), @intFromPtr(buf), count),
+        syscall.syscall3(syscall.linux.READ, @intCast(fd), @intFromPtr(buf), count),
     );
 }
 
 /// Close a file descriptor.
 pub export fn close(fd: c_int) c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall1(syscall.nr.CLOSE, @intCast(fd)),
+        syscall.syscall1(syscall.linux.CLOSE, @intCast(fd)),
     );
     return @intCast(ret);
 }
@@ -28,7 +28,7 @@ pub export fn close(fd: c_int) c_int {
 /// Reposition file offset.
 pub export fn lseek(fd: c_int, offset: i64, whence: c_int) i64 {
     const raw = syscall.syscall3(
-        syscall.nr.LSEEK,
+        syscall.linux.LSEEK,
         @intCast(fd),
         @bitCast(offset),
         @intCast(whence),
@@ -44,7 +44,7 @@ pub export fn lseek(fd: c_int, offset: i64, whence: c_int) i64 {
 /// Delete a name from the filesystem.
 pub export fn unlink(path: [*:0]const u8) c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall1(syscall.nr.TRX_FS_UNLINK, @intFromPtr(path)),
+        syscall.syscall1(syscall.linux.UNLINK, @intFromPtr(path)),
     );
     return @intCast(ret);
 }
@@ -52,7 +52,7 @@ pub export fn unlink(path: [*:0]const u8) c_int {
 /// Return the process ID of the calling process.
 pub export fn getpid() c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall0(syscall.nr.GETPID),
+        syscall.syscall0(syscall.linux.GETPID),
     );
     return @intCast(ret);
 }
@@ -60,7 +60,7 @@ pub export fn getpid() c_int {
 /// Duplicate a file descriptor.
 pub export fn dup2(oldfd: c_int, newfd: c_int) c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall2(syscall.nr.DUP2, @intCast(oldfd), @intCast(newfd)),
+        syscall.syscall2(syscall.linux.DUP2, @intCast(oldfd), @intCast(newfd)),
     );
     return @intCast(ret);
 }
@@ -68,7 +68,7 @@ pub export fn dup2(oldfd: c_int, newfd: c_int) c_int {
 /// Create a pipe.
 pub export fn pipe(pipefd: *[2]c_int) c_int {
     const ret = errno_mod.syscall_ret(
-        syscall.syscall1(syscall.nr.PIPE, @intFromPtr(pipefd)),
+        syscall.syscall1(syscall.linux.PIPE, @intFromPtr(pipefd)),
     );
     return @intCast(ret);
 }

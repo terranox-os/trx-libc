@@ -1,14 +1,17 @@
-# trx-libc Kernel Integration Test
+# trx-libc Kernel Integration Tests
 
 Tests that a C program linked against trx-libc runs correctly on the
-TerranoxOS kernel.
+TerranoxOS kernel. The suite is intended to be run from the trx-libc checkout
+with a local TerranoxOS checkout available for the temporary ELF embedding.
 
 ## Prerequisites
 
 - Zig 0.15.2+
-- clang (from terranox-toolchain-musl Docker image)
-- lld (LLVM linker)
-- TerranoxOS kernel source (for embedding the test binary)
+- clang and lld (LLVM linker)
+- `qemu-system-x86_64`, `xxd`, and `file`
+- TerranoxOS kernel source
+- The TerranoxOS `kernel-libs` checkout, either at `TERRANOX_KERNEL_LIBS` or
+  the OS checkout's `kernel-libs` directory
 
 ## Build
 
@@ -17,8 +20,31 @@ TerranoxOS kernel.
 ```
 
 This produces:
-- `out/hello.elf` -- static ELF64 x86_64 binary linked against libc-x86_64.a
-- `out/hello_trxlibc_elf.h` -- hex array for kernel embedding
+- `out/trxlibc_integration.elf` -- static ELF64 x86_64 binary linked against
+  `libc-x86_64.a`
+- `out/hello_trxlibc_elf.h` -- generated hex array for kernel embedding
+
+The compiler tools can be selected without changing the script:
+
+```bash
+ZIG=/path/to/zig CLANG=clang LD_LLD=ld.lld ./tests/integration/build.sh
+```
+
+## QEMU run
+
+`run-qemu.sh` builds the ELF, temporarily installs the generated header in a
+clean TerranoxOS checkout, builds the ISO, boots QEMU, and runs the
+`run-trxlibc` shell command:
+
+```bash
+TERRANOX_OS=/path/to/terranox-os \
+TERRANOX_KERNEL_LIBS=/path/to/kernel-libs \
+./tests/integration/run-qemu.sh
+```
+
+The script restores the OS header on exit and refuses to overwrite a header
+that already has local changes. Set `TRX_QEMU_BOOT_DELAY` or
+`TRX_QEMU_TIMEOUT` to tune the boot and test timeouts.
 
 ## Integration with TerranoxOS kernel
 
@@ -29,12 +55,21 @@ This produces:
 
 ## What it tests
 
-1. `write()` to stdout (syscall 0x0001)
-2. `getpid()` (syscall 0x0006)
-3. `malloc()` + `free()` (backed by syscall 0x0003 MMAP)
-4. `strlen()`, `strcpy()` (pure computation)
-5. `__errno_location()` (thread-local errno)
-6. `_exit()` via `return 0` from main (CRT startup)
+The suite covers:
+
+1. tmpfs file creation, read/write, seek, `stat`, `fstat`, close, and unlink
+2. `malloc`, `calloc`, `realloc`, and free stress
+3. `pthread_create`/join and shared mutex contention
+4. Display enumeration, surface creation, and compositor present
+5. PS/2 input enumeration, open, empty read, and close
+6. `sigaction`, `kill`, and `raise` roundtrip behavior
+7. IPC channel create, send, receive, and close
+
+The display assertion validates compositor/framebuffer syscall acceptance;
+the current surface ABI does not expose user-space pixel readback. Likewise,
+the current kernel signal delivery path consumes an installed handler without
+entering a user-space callback, so the signal test verifies disposition and
+delivery status rather than callback execution.
 
 ## Register convention
 

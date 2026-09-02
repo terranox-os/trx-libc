@@ -20,7 +20,7 @@ pub const O_APPEND: c_int = 0o2000;
 pub export fn open(path: [*:0]const u8, flags: c_int, mode: c_uint) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall3(
-            syscall.nr.OPEN,
+            syscall.linux.OPEN,
             @intFromPtr(path),
             @intCast(flags),
             @as(usize, mode),

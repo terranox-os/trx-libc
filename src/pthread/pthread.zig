@@ -7,14 +7,12 @@
 //!   GEN_SYS_TRX_FUTEX_WAIT (0x0117)
 //!   GEN_SYS_TRX_FUTEX_WAKE (0x0118)
 //!
-//! Thread lifecycle uses:
-//!   GEN_SYS_TRX_THREAD_CREATE (0x0110)
-//!   GEN_SYS_TRX_THREAD_EXIT   (0x0111)
-//!   GEN_SYS_TRX_THREAD_JOIN   (0x0112)
-//!   GEN_SYS_YIELD              (0x0005)
+//! Thread lifecycle uses the Linux-compatible clone/gettid entry points
+//! translated by TerranoxOS, plus the shared EXIT and YIELD calls.
 
 const builtin = @import("builtin");
 const is_test = builtin.is_test;
+const arch = builtin.cpu.arch;
 
 const syscall = @import("../internal/syscall.zig");
 const errno_mod = @import("../errno/errno.zig");
@@ -199,7 +197,102 @@ pub export fn pthread_cond_destroy(cond: *pthread_cond_t) c_int {
 // Thread create / join / exit / self / yield
 // ---------------------------------------------------------------------------
 
-fn thread_create_real(thread: *pthread_t, attr: ?*const pthread_attr_t, start_routine: *const fn (?*anyopaque) callconv(.c) ?*anyopaque, arg: ?*anyopaque) c_int {
+const ThreadStartRoutine = *const fn (?*anyopaque) callconv(.c) ?*anyopaque;
+
+const ThreadRecord = struct {
+    active: u32 = 0,
+    started: u32 = 0,
+    done: u32 = 0,
+    tid: pthread_t = 0,
+    stack_base: usize = 0,
+    stack_size: usize = 0,
+    start: ?ThreadStartRoutine = null,
+    arg: ?*anyopaque = null,
+    retval: ?*anyopaque = null,
+};
+
+// The current kernel clone ABI resumes the child at the instruction after
+// clone with a new stack. A single bootstrap record lets the child find its
+// pthread start routine without requiring a TLS setup trampoline.
+var thread_records: [32]ThreadRecord = [_]ThreadRecord{.{}} ** 32;
+var thread_boot_record: usize = 0;
+var thread_create_lock: u32 = 0;
+
+const CLONE_VM: usize = 0x00000100;
+const CLONE_THREAD: usize = 0x00010000;
+
+/// Invoke clone and enter the child bootstrap before returning to Zig code.
+///
+/// TerranoxOS supplies the child stack and resumes at the instruction after
+/// the syscall. Returning to the caller in that state is unsafe because the
+/// caller's locals are addressed relative to its old stack. The inline
+/// assembly branches directly to the bootstrap when RAX is zero, while the
+/// parent follows the normal return path.
+fn clone_with_bootstrap(flags: usize, child_stack: usize, bootstrap: *const fn () callconv(.c) noreturn) usize {
+    return switch (arch) {
+        .x86_64 => asm volatile (
+            \\syscall
+            \\testq %%rax, %%rax
+            \\jnz 1f
+            \\jmp *%[bootstrap]
+            \\1:
+            : [ret] "={rax}" (-> usize),
+            : [number] "{rax}" (syscall.linux.CLONE),
+              [flags] "{rdi}" (flags),
+              [child_stack] "{rsi}" (child_stack),
+              [bootstrap] "r" (@intFromPtr(bootstrap)),
+            : .{ .rcx = true, .r11 = true, .memory = true }),
+        .aarch64, .riscv64 => syscall.syscall5(
+            syscall.linux.CLONE,
+            flags,
+            child_stack,
+            0,
+            0,
+            0,
+        ),
+        else => @compileError("unsupported architecture"),
+    };
+}
+
+fn thread_child_bootstrap() callconv(.c) noreturn {
+    const record_addr = @atomicLoad(usize, &thread_boot_record, .acquire);
+    if (record_addr == 0) {
+        _ = syscall.syscall1(syscall.linux.EXIT, 0);
+        unreachable;
+    }
+
+    const child_rec: *ThreadRecord = @ptrFromInt(record_addr);
+    child_rec.tid = @intCast(syscall.syscall0(syscall.linux.GETTID));
+    @atomicStore(u32, &child_rec.started, 1, .release);
+
+    if (child_rec.start) |start| {
+        child_rec.retval = start(child_rec.arg);
+    }
+    @atomicStore(u32, &child_rec.done, 1, .release);
+    _ = syscall.syscall1(syscall.linux.EXIT, 0);
+    unreachable;
+}
+
+fn thread_create_real(thread: *pthread_t, attr: ?*const pthread_attr_t, start_routine: ThreadStartRoutine, arg: ?*anyopaque) c_int {
+    // Only one clone can be in the bootstrap window at a time because the
+    // kernel ABI does not provide a child-stack argument to a C trampoline.
+    while (@atomicRmw(u32, &thread_create_lock, .Xchg, 1, .acquire) != 0) {
+        _ = syscall.syscall0(syscall.linux.YIELD);
+    }
+
+    var record: ?*ThreadRecord = null;
+    for (&thread_records) |*candidate| {
+        if (@atomicLoad(u32, &candidate.active, .acquire) == 0) {
+            record = candidate;
+            break;
+        }
+    }
+    const rec = record orelse {
+        @atomicStore(u32, &thread_create_lock, 0, .release);
+        errno_mod.errno = errno_mod.EAGAIN;
+        return errno_mod.EAGAIN;
+    };
+
     const stack_sz = if (attr) |a| a.stack_size else 2 * 1024 * 1024;
 
     // Allocate stack via mmap (anonymous, read-write)
@@ -208,7 +301,7 @@ fn thread_create_real(thread: *pthread_t, attr: ?*const pthread_attr_t, start_ro
     const total_sz = stack_sz + guard_sz;
 
     const raw = syscall.syscall6(
-        syscall.nr.MMAP,
+        syscall.linux.MMAP,
         0, // addr hint
         total_sz,
         3, // PROT_READ | PROT_WRITE
@@ -219,60 +312,95 @@ fn thread_create_real(thread: *pthread_t, attr: ?*const pthread_attr_t, start_ro
     const signed: isize = @bitCast(raw);
     if (signed < 0 and signed > -4096) {
         errno_mod.errno = @intCast(-signed);
+        @atomicStore(u32, &thread_create_lock, 0, .release);
         return errno_mod.ENOMEM;
     }
 
-    // Stack grows downward: stack_ptr = base + total_sz
+    // Stack grows downward: stack_ptr = base + total_sz. The guard page is
+    // reserved at the low end of the allocation for future protection setup.
     const stack_top = raw + total_sz;
 
-    // Call trx_thread_create syscall
-    const ret_raw = syscall.syscall4(
-        syscall.nr.TRX_THREAD_CREATE,
-        @intFromPtr(start_routine),
+    rec.* = .{
+        .active = 1,
+        .started = 0,
+        .done = 0,
+        .tid = 0,
+        .stack_base = raw,
+        .stack_size = total_sz,
+        .start = start_routine,
+        .arg = arg,
+        .retval = null,
+    };
+    @atomicStore(usize, &thread_boot_record, @intFromPtr(rec), .release);
+
+    // Linux clone flags are translated by TerranoxOS to its shared-address-
+    // space thread creation path. The child branches directly to the
+    // bootstrap with RAX == 0 before returning to this function.
+    const ret_raw = clone_with_bootstrap(
+        CLONE_VM | CLONE_THREAD,
         stack_top,
-        stack_sz,
-        @intFromPtr(arg),
+        thread_child_bootstrap,
     );
     const ret_signed: isize = @bitCast(ret_raw);
+    if (ret_signed == 0) {
+        unreachable;
+    }
     if (ret_signed < 0 and ret_signed > -4096) {
-        // Clean up the stack
-        _ = syscall.syscall2(syscall.nr.MUNMAP, raw, total_sz);
+        @atomicStore(usize, &thread_boot_record, 0, .release);
+        @atomicStore(u32, &rec.active, 0, .release);
+        _ = syscall.syscall2(syscall.linux.MUNMAP, raw, total_sz);
         errno_mod.errno = @intCast(-ret_signed);
+        @atomicStore(u32, &thread_create_lock, 0, .release);
         return @intCast(-ret_signed);
     }
 
     thread.* = @intCast(ret_raw);
+    rec.tid = thread.*;
+    while (@atomicLoad(u32, &rec.started, .acquire) == 0) {
+        _ = syscall.syscall0(syscall.linux.YIELD);
+    }
+    @atomicStore(usize, &thread_boot_record, 0, .release);
+    @atomicStore(u32, &thread_create_lock, 0, .release);
     return 0;
 }
 
 fn thread_join_real(thread: pthread_t, retval: ?*?*anyopaque) c_int {
-    const raw = syscall.syscall2(
-        syscall.nr.TRX_THREAD_JOIN,
-        @intCast(thread),
-        if (retval) |r| @intFromPtr(r) else 0,
-    );
-    const signed: isize = @bitCast(raw);
-    if (signed < 0 and signed > -4096) {
-        errno_mod.errno = @intCast(-signed);
-        return @intCast(-signed);
+    var record: ?*ThreadRecord = null;
+    for (&thread_records) |*candidate| {
+        if (@atomicLoad(u32, &candidate.active, .acquire) != 0 and candidate.tid == thread) {
+            record = candidate;
+            break;
+        }
     }
+    const rec = record orelse {
+        errno_mod.errno = errno_mod.ESRCH;
+        return errno_mod.ESRCH;
+    };
+
+    while (@atomicLoad(u32, &rec.done, .acquire) == 0) {
+        _ = syscall.syscall0(syscall.linux.YIELD);
+    }
+    if (retval) |out| {
+        out.* = rec.retval;
+    }
+
+    _ = syscall.syscall2(syscall.linux.MUNMAP, rec.stack_base, rec.stack_size);
+    @atomicStore(u32, &rec.active, 0, .release);
     return 0;
 }
 
 fn thread_exit_real(retval: ?*anyopaque) noreturn {
-    _ = syscall.syscall1(syscall.nr.TRX_THREAD_EXIT, @intFromPtr(retval));
+    _ = syscall.syscall1(syscall.linux.EXIT, @intFromPtr(retval));
     unreachable;
 }
 
 fn thread_self_real() pthread_t {
-    // Use getpid as a fallback for thread ID in single-threaded contexts.
-    // A real implementation would use a TLS field set by thread_create.
-    const raw = syscall.syscall0(syscall.nr.GETPID);
+    const raw = syscall.syscall0(syscall.linux.GETTID);
     return @intCast(raw);
 }
 
 fn thread_yield_real() c_int {
-    _ = syscall.syscall0(syscall.nr.YIELD);
+    _ = syscall.syscall0(syscall.linux.YIELD);
     return 0;
 }
 
