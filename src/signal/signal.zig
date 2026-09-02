@@ -1,7 +1,7 @@
 //! POSIX signal handling (Phase 5).
 //!
 //! Provides signal constants, signal set operations, and signal
-//! disposition management. kill() maps to TRX_PROCESS_KILL (0x0103).
+//! disposition management. kill() uses the kernel's Linux-compatible mapping.
 
 const builtin = @import("builtin");
 const is_test = builtin.is_test;
@@ -56,6 +56,25 @@ pub const sigaction_t = extern struct {
 
 var signal_table: [32]sigaction_t = [_]sigaction_t{.{}} ** 32;
 
+fn sigaction_real(sig: c_int, act: ?*const sigaction_t, oldact: ?*sigaction_t) c_int {
+    const ret = errno_mod.syscall_ret(syscall.syscall3(
+        syscall.linux.RT_SIGACTION,
+        @intCast(sig),
+        if (act) |a| @intFromPtr(a) else 0,
+        if (oldact) |oa| @intFromPtr(oa) else 0,
+    ));
+    return @intCast(ret);
+}
+
+fn sigaction_test(sig: c_int, act: ?*const sigaction_t, oldact: ?*sigaction_t) c_int {
+    const idx: usize = @intCast(sig);
+    if (oldact) |oa| oa.* = signal_table[idx];
+    if (act) |a| signal_table[idx] = a.*;
+    return 0;
+}
+
+const sigaction_impl = if (is_test) sigaction_test else sigaction_real;
+
 // ---------------------------------------------------------------------------
 // Helper: validate signal number
 // ---------------------------------------------------------------------------
@@ -71,7 +90,7 @@ fn valid_sig(sig: c_int) bool {
 fn kill_real(pid: c_int, sig: c_int) c_int {
     const ret = errno_mod.syscall_ret(
         syscall.syscall2(
-            syscall.nr.TRX_PROCESS_KILL,
+            syscall.linux.KILL,
             @bitCast(@as(isize, pid)),
             @intCast(sig),
         ),
@@ -100,10 +119,10 @@ pub export fn signal(sig: c_int, handler: sighandler_t) sighandler_t {
         errno_mod.errno = errno_mod.EINVAL;
         return SIG_DFL;
     }
-    const idx: usize = @intCast(sig);
-    const old = signal_table[idx].handler;
-    signal_table[idx].handler = handler;
-    return old;
+    var act = sigaction_t{ .handler = handler };
+    var old: sigaction_t = .{};
+    if (sigaction(sig, &act, &old) != 0) return SIG_DFL;
+    return old.handler;
 }
 
 /// Examine and change a signal action.
@@ -112,14 +131,7 @@ pub export fn sigaction(sig: c_int, act: ?*const sigaction_t, oldact: ?*sigactio
         errno_mod.errno = errno_mod.EINVAL;
         return -1;
     }
-    const idx: usize = @intCast(sig);
-    if (oldact) |oa| {
-        oa.* = signal_table[idx];
-    }
-    if (act) |a| {
-        signal_table[idx] = a.*;
-    }
-    return 0;
+    return sigaction_impl(sig, act, oldact);
 }
 
 /// Send a signal to a process.

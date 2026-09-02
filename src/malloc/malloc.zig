@@ -106,7 +106,7 @@ fn requestPagesReal(min_bytes: usize) ?[*]u8 {
     const size = alignUp(min_bytes, PAGE_SIZE);
     // syscall MMAP: addr=0, len=size, prot=RW(3), flags=ANON|PRIVATE(0x22), fd=-1, offset=0
     const raw = syscall.syscall6(
-        syscall.nr.MMAP,
+        syscall.linux.MMAP,
         0, // addr hint
         size,
         3, // PROT_READ | PROT_WRITE
@@ -120,7 +120,7 @@ fn requestPagesReal(min_bytes: usize) ?[*]u8 {
 }
 
 fn releasePagesReal(ptr: [*]u8, size: usize) void {
-    _ = syscall.syscall2(syscall.nr.MUNMAP, @intFromPtr(ptr), size);
+    _ = syscall.syscall2(syscall.linux.MUNMAP, @intFromPtr(ptr), size);
 }
 
 const requestPages = if (is_test) requestPagesTest else requestPagesReal;
@@ -265,6 +265,8 @@ fn freeListBestFit(required: usize) ?usize {
 var wilderness: usize = 0;
 /// End address of the current arena region (exclusive).
 var wilderness_end: usize = 0;
+/// Start address of the current arena region, used to bound footer reads.
+var wilderness_region_start: usize = 0;
 
 /// Grow the wilderness by requesting at least `min_bytes` from the backing store.
 fn growWilderness(min_bytes: usize) bool {
@@ -286,6 +288,7 @@ fn growWilderness(min_bytes: usize) bool {
         }
         wilderness = base;
         wilderness_end = base + request;
+        wilderness_region_start = base;
         setChunkTags(wilderness, request); // free
     }
     return true;
@@ -395,7 +398,7 @@ fn coalesce(header_addr: usize) usize {
     }
 
     // Coalesce with previous chunk (read footer of previous).
-    if (addr > 0 and addr >= FOOTER_SIZE) {
+    if (addr > wilderness_region_start and addr >= FOOTER_SIZE) {
         const prev_footer_addr = addr - FOOTER_SIZE;
         // Safety: only read if prev_footer_addr is within our managed region.
         // We do a conservative check: must be at least a header away from start.
@@ -574,6 +577,7 @@ pub fn resetState() void {
     free_list_head = 0;
     wilderness = 0;
     wilderness_end = 0;
+    wilderness_region_start = 0;
     test_arena_used = 0;
     lock = 0;
     // Zero out the arena to catch stale-pointer bugs.

@@ -105,23 +105,49 @@ pub const nr = struct {
     pub const TRX_NET_RECVMSG: usize = c.GEN_SYS_TRX_NET_RECVMSG;
 };
 
+/// Raw Linux x86_64 syscall numbers accepted by the TerranoxOS compatibility
+/// layer. The kernel translates these values before dispatch, so runtime
+/// wrappers must use this namespace for shared POSIX operations rather than
+/// the colliding genesis-abi numbers above.
+pub const linux = struct {
+    pub const READ: usize = 0;
+    pub const WRITE: usize = 1;
+    pub const OPEN: usize = 2;
+    pub const CLOSE: usize = 3;
+    pub const STAT: usize = 4;
+    pub const FSTAT: usize = 5;
+    pub const LSEEK: usize = 8;
+    pub const MMAP: usize = 9;
+    pub const MUNMAP: usize = 11;
+    pub const BRK: usize = 12;
+    pub const RT_SIGACTION: usize = 13;
+    pub const RT_SIGPROCMASK: usize = 14;
+    pub const IOCTL: usize = 16;
+    pub const DUP2: usize = 33;
+    pub const PIPE: usize = 22;
+    pub const EXIT: usize = 60;
+    pub const KILL: usize = 62;
+    pub const YIELD: usize = 24;
+    pub const GETPID: usize = 39;
+    pub const GETTID: usize = 186;
+    pub const CLONE: usize = 56;
+    pub const UNLINK: usize = 87;
+};
+
 pub fn syscall0(number: usize) usize {
     return switch (arch) {
         .x86_64 => asm volatile ("syscall"
             : [ret] "={rax}" (-> usize),
             : [number] "{rax}" (number),
-            : .{ .rcx = true, .r11 = true, .memory = true }
-        ),
+            : .{ .rcx = true, .r11 = true, .memory = true }),
         .aarch64 => asm volatile ("svc #0"
             : [ret] "={x0}" (-> usize),
             : [number] "{x8}" (number),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         .riscv64 => asm volatile ("ecall"
             : [ret] "={a0}" (-> usize),
             : [number] "{a7}" (number),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         else => @compileError("unsupported architecture"),
     };
 }
@@ -132,20 +158,17 @@ pub fn syscall1(number: usize, arg1: usize) usize {
             : [ret] "={rax}" (-> usize),
             : [number] "{rax}" (number),
               [arg1] "{rdi}" (arg1),
-            : .{ .rcx = true, .r11 = true, .memory = true }
-        ),
+            : .{ .rcx = true, .r11 = true, .memory = true }),
         .aarch64 => asm volatile ("svc #0"
             : [ret] "={x0}" (-> usize),
             : [number] "{x8}" (number),
               [arg1] "{x0}" (arg1),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         .riscv64 => asm volatile ("ecall"
             : [ret] "={a0}" (-> usize),
             : [number] "{a7}" (number),
               [arg1] "{a0}" (arg1),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         else => @compileError("unsupported architecture"),
     };
 }
@@ -157,22 +180,19 @@ pub fn syscall2(number: usize, arg1: usize, arg2: usize) usize {
             : [number] "{rax}" (number),
               [arg1] "{rdi}" (arg1),
               [arg2] "{rsi}" (arg2),
-            : .{ .rcx = true, .r11 = true, .memory = true }
-        ),
+            : .{ .rcx = true, .r11 = true, .memory = true }),
         .aarch64 => asm volatile ("svc #0"
             : [ret] "={x0}" (-> usize),
             : [number] "{x8}" (number),
               [arg1] "{x0}" (arg1),
               [arg2] "{x1}" (arg2),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         .riscv64 => asm volatile ("ecall"
             : [ret] "={a0}" (-> usize),
             : [number] "{a7}" (number),
               [arg1] "{a0}" (arg1),
               [arg2] "{a1}" (arg2),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         else => @compileError("unsupported architecture"),
     };
 }
@@ -185,24 +205,21 @@ pub fn syscall3(number: usize, arg1: usize, arg2: usize, arg3: usize) usize {
               [arg1] "{rdi}" (arg1),
               [arg2] "{rsi}" (arg2),
               [arg3] "{rdx}" (arg3),
-            : .{ .rcx = true, .r11 = true, .memory = true }
-        ),
+            : .{ .rcx = true, .r11 = true, .memory = true }),
         .aarch64 => asm volatile ("svc #0"
             : [ret] "={x0}" (-> usize),
             : [number] "{x8}" (number),
               [arg1] "{x0}" (arg1),
               [arg2] "{x1}" (arg2),
               [arg3] "{x2}" (arg3),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         .riscv64 => asm volatile ("ecall"
             : [ret] "={a0}" (-> usize),
             : [number] "{a7}" (number),
               [arg1] "{a0}" (arg1),
               [arg2] "{a1}" (arg2),
               [arg3] "{a2}" (arg3),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         else => @compileError("unsupported architecture"),
     };
 }
@@ -216,8 +233,7 @@ pub fn syscall4(number: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usiz
               [arg2] "{rsi}" (arg2),
               [arg3] "{rdx}" (arg3),
               [arg4] "{r10}" (arg4),
-            : .{ .rcx = true, .r11 = true, .memory = true }
-        ),
+            : .{ .rcx = true, .r11 = true, .memory = true }),
         .aarch64 => asm volatile ("svc #0"
             : [ret] "={x0}" (-> usize),
             : [number] "{x8}" (number),
@@ -225,8 +241,7 @@ pub fn syscall4(number: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usiz
               [arg2] "{x1}" (arg2),
               [arg3] "{x2}" (arg3),
               [arg4] "{x3}" (arg4),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         .riscv64 => asm volatile ("ecall"
             : [ret] "={a0}" (-> usize),
             : [number] "{a7}" (number),
@@ -234,8 +249,7 @@ pub fn syscall4(number: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usiz
               [arg2] "{a1}" (arg2),
               [arg3] "{a2}" (arg3),
               [arg4] "{a3}" (arg4),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         else => @compileError("unsupported architecture"),
     };
 }
@@ -250,8 +264,7 @@ pub fn syscall5(number: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usiz
               [arg3] "{rdx}" (arg3),
               [arg4] "{r10}" (arg4),
               [arg5] "{r8}" (arg5),
-            : .{ .rcx = true, .r11 = true, .memory = true }
-        ),
+            : .{ .rcx = true, .r11 = true, .memory = true }),
         .aarch64 => asm volatile ("svc #0"
             : [ret] "={x0}" (-> usize),
             : [number] "{x8}" (number),
@@ -260,8 +273,7 @@ pub fn syscall5(number: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usiz
               [arg3] "{x2}" (arg3),
               [arg4] "{x3}" (arg4),
               [arg5] "{x4}" (arg5),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         .riscv64 => asm volatile ("ecall"
             : [ret] "={a0}" (-> usize),
             : [number] "{a7}" (number),
@@ -270,8 +282,7 @@ pub fn syscall5(number: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usiz
               [arg3] "{a2}" (arg3),
               [arg4] "{a3}" (arg4),
               [arg5] "{a4}" (arg5),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         else => @compileError("unsupported architecture"),
     };
 }
@@ -287,8 +298,7 @@ pub fn syscall6(number: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usiz
               [arg4] "{r10}" (arg4),
               [arg5] "{r8}" (arg5),
               [arg6] "{r9}" (arg6),
-            : .{ .rcx = true, .r11 = true, .memory = true }
-        ),
+            : .{ .rcx = true, .r11 = true, .memory = true }),
         .aarch64 => asm volatile ("svc #0"
             : [ret] "={x0}" (-> usize),
             : [number] "{x8}" (number),
@@ -298,8 +308,7 @@ pub fn syscall6(number: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usiz
               [arg4] "{x3}" (arg4),
               [arg5] "{x4}" (arg5),
               [arg6] "{x5}" (arg6),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         .riscv64 => asm volatile ("ecall"
             : [ret] "={a0}" (-> usize),
             : [number] "{a7}" (number),
@@ -309,8 +318,7 @@ pub fn syscall6(number: usize, arg1: usize, arg2: usize, arg3: usize, arg4: usiz
               [arg4] "{a3}" (arg4),
               [arg5] "{a4}" (arg5),
               [arg6] "{a5}" (arg6),
-            : .{ .memory = true }
-        ),
+            : .{ .memory = true }),
         else => @compileError("unsupported architecture"),
     };
 }

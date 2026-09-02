@@ -14,13 +14,12 @@ const errno_mod = @import("../errno/errno.zig");
 // ---------------------------------------------------------------------------
 
 fn input_enumerate_real(devices: *anyopaque, count: *u32) c_int {
-    const ret = errno_mod.syscall_ret(
-        syscall.syscall2(
-            syscall.nr.TRX_INPUT_ENUMERATE,
-            @intFromPtr(devices),
-            @intFromPtr(count),
-        ),
-    );
+    const ret = errno_mod.syscall_ret(syscall.syscall2(
+        syscall.nr.TRX_INPUT_ENUMERATE,
+        @intFromPtr(devices),
+        @as(usize, count.*),
+    ));
+    if (ret >= 0) count.* = @intCast(ret);
     return @intCast(ret);
 }
 

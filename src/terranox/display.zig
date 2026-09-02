@@ -14,13 +14,12 @@ const errno_mod = @import("../errno/errno.zig");
 // ---------------------------------------------------------------------------
 
 fn display_enumerate_real(displays: *anyopaque, count: *u32) c_int {
-    const ret = errno_mod.syscall_ret(
-        syscall.syscall2(
-            syscall.nr.TRX_DISPLAY_ENUMERATE,
-            @intFromPtr(displays),
-            @intFromPtr(count),
-        ),
-    );
+    const ret = errno_mod.syscall_ret(syscall.syscall2(
+        syscall.nr.TRX_DISPLAY_ENUMERATE,
+        @intFromPtr(displays),
+        @as(usize, count.*),
+    ));
+    if (ret >= 0) count.* = @intCast(ret);
     return @intCast(ret);
 }
 
