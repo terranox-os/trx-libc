@@ -27,6 +27,7 @@ fi
 
 echo "=== Building integration ELF ==="
 ZIG="${ZIG:-/tmp/zig-x86_64-linux-0.15.2/zig}" \
+TERRANOX_KERNEL_LIBS="$KERNEL_LIBS" \
     "$LIBC_ROOT/tests/integration/build.sh"
 
 HEADER_BACKUP="$(mktemp)"

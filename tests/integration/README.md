@@ -27,6 +27,7 @@ This produces:
 The compiler tools can be selected without changing the script:
 
 ```bash
+TERRANOX_KERNEL_LIBS=/path/to/kernel-libs \
 ZIG=/path/to/zig CLANG=clang LD_LLD=ld.lld ./tests/integration/build.sh
 ```
 

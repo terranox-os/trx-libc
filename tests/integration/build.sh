@@ -4,7 +4,7 @@ set -euo pipefail
 LIBC_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 LIBC_INCLUDE="$LIBC_ROOT/include"
 LIBC_LIB="$LIBC_ROOT/zig-out/lib"
-KERNEL_LIBS="$LIBC_ROOT/deps/kernel-libs/genesis-abi/include"
+KERNEL_LIBS_ROOT="${TERRANOX_KERNEL_LIBS:-$LIBC_ROOT/deps/kernel-libs}"
 OUT_DIR="$LIBC_ROOT/tests/integration/out"
 ZIG_BIN="${ZIG:-zig}"
 CLANG_BIN="${CLANG:-clang}"
@@ -15,11 +15,21 @@ TEST_NAME="${2:-trxlibc_integration}"
 OUT_ELF="$OUT_DIR/${TEST_NAME}.elf"
 OUT_HEADER="$OUT_DIR/hello_trxlibc_elf.h"
 
+if [ -f "$KERNEL_LIBS_ROOT/genesis-abi/include/genesis_syscall.h" ]; then
+    KERNEL_LIBS="$KERNEL_LIBS_ROOT/genesis-abi/include"
+elif [ -f "$KERNEL_LIBS_ROOT/genesis_syscall.h" ]; then
+    KERNEL_LIBS="$KERNEL_LIBS_ROOT"
+else
+    echo "kernel-libs genesis ABI headers are missing: $KERNEL_LIBS_ROOT" >&2
+    echo "Set TERRANOX_KERNEL_LIBS to a kernel-libs checkout or include directory." >&2
+    exit 1
+fi
+
 mkdir -p "$OUT_DIR"
 
 echo "=== Building trx-libc ==="
 cd "$LIBC_ROOT"
-"$ZIG_BIN" build
+"$ZIG_BIN" build -Dkernel-libs="$KERNEL_LIBS"
 
 # Zig 0.15.2 can emit an x86_64 archive with an odd-sized member and a
 # non-readable member mode when the object layout changes. GNU ar can read
